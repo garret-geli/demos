@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Storage Sizing — Stage 1 Heuristics</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  </head>
+  <body>
+    <header>
+      <div class="logo"></div>
+      <h1>Storage Sizing — Stage 1 Heuristics</h1>
+      <small>Demo · May 2026</small>
+    </header>
+
+    <div class="page">
+      <!-- ── Tariff ─────────────────────────────────────────────── -->
+      <div class="card">
+        <div class="card-head"><div class="card-title">Tariff</div></div>
+        <div class="row-2">
+          <div>
+            <div class="field">
+              <label for="tariff-select">Tariff Schedule</label>
+              <select id="tariff-select">
+                <option value="pge-b19">PG&amp;E B-19-TOU (NEM3)</option>
+                <option value="sdge-al">SDG&amp;E AL-TOU-2 (NEM3)</option>
+                <option value="sce-gs2e">SCE TOU-GS-2-E (NEM2)</option>
+              </select>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">
+              <div class="field"><label for="r-nontou">Non-TOU Demand ($/kW)</label><input type="number" id="r-nontou" value="0" min="0" step="0.5" /></div>
+              <div class="field"><label for="r-onpkd">On-Peak Demand ($/kW)</label><input type="number" id="r-onpkd" value="16.00" min="0" step="0.5" /></div>
+              <div class="field"><label for="r-onpke">On-Peak Energy ($/kWh)</label><input type="number" id="r-onpke" value="0.380" min="0" step="0.01" /></div>
+              <div class="field"><label for="r-offpke">Off-Peak Energy ($/kWh)</label><input type="number" id="r-offpke" value="0.160" min="0" step="0.01" /></div>
+              <div class="field" style="grid-column: 1/-1">
+                <label for="r-soffpke">Super Off-Peak Energy ($/kWh) <span style="color: var(--gray-400)">(optional)</span></label
+                ><input type="number" id="r-soffpke" value="0.080" min="0" step="0.01" />
+              </div>
+            </div>
+          </div>
+          <div>
+            <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--gray-400); margin-bottom: 8px">Summary</div>
+            <div class="tariff-grid" id="tariff-tiles"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Load Profile + Solar ───────────────────────────────── -->
+      <div class="row-2">
+        <div class="card">
+          <div class="card-head"><div class="card-title">Load Profile</div></div>
+          <div class="chips" id="scenario-chips">
+            <div class="chip active" data-file="load_mall_15min_kW_2col_1300kW.csv">Mall</div>
+            <div class="chip" data-file="load_office_15min_kWh_2col_1100kW_2025.csv">Office</div>
+            <div class="chip" data-file="load_rock_crusher_15min_kW_2col_1900kW.csv">Rock Crusher</div>
+            <div class="chip" data-file="load_school_15min_kW_2col_1100kW.csv">School</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div class="card-title">Solar (PV)</div></div>
+          <div class="toggle-row">
+            <input type="checkbox" id="solar-toggle" />
+            <label for="solar-toggle">Include Solar</label>
+          </div>
+          <div id="solar-size-field" style="display: none">
+            <div class="field"><label for="solar-kw">System size (kWdc) — scales 1,000 kW reference profile linearly</label><input type="number" id="solar-kw" value="500" min="1" max="10000" /></div>
+          </div>
+          <div style="font-size: 12px; color: var(--gray-400); margin-top: 4px">When enabled, outputs reflect net load (load minus generation).</div>
+        </div>
+      </div>
+
+      <!-- ── Accordion ─────────────────────────────────────────── -->
+      <button class="expand-btn" id="accordion-btn" onclick="toggleAccordion()">
+        <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 7h10M9 12h10M9 17h10M5 7h.01M5 12h.01M5 17h.01" />
+        </svg>
+        Storage Sizing Analysis
+        <span style="font-size: 12px; font-weight: 400; opacity: 0.75">— battery sizing heuristics based on load &amp; tariff</span>
+        <span class="expand-chevron" id="accordion-chevron">▼</span>
+      </button>
+
+      <div class="accordion-body" id="accordion-body">
+        <div id="accordion-loading" class="loading">Loading data…</div>
+
+        <!-- Coverage Ambition slider -->
+        <div class="coverage-bar" id="section-coverage" style="display: none">
+          <label for="cov-range">Coverage Ambition</label>
+          <input type="range" id="cov-range" min="50" max="95" step="5" value="80" />
+          <span class="cov-val" id="cov-display">80%</span>
+          <span class="hint">50% = economical · 95% = size for worst days</span>
+        </div>
+
+        <!-- Load stats + heatmap -->
+        <div id="section-load" style="display: none">
+          <div class="card" style="margin-bottom: 12px">
+            <div class="card-head"><div class="card-title">Site Load Overview</div></div>
+            <div class="stats-row" id="load-stats"></div>
+          </div>
+          <div class="card">
+            <div class="card-head">
+              <div class="card-title" id="heatmap-title">Load Heatmap — Date × Hour of Day</div>
+            </div>
+            <!-- Heatmap controls -->
+            <div class="hm-controls">
+              <div class="hm-case-toggle">
+                <button class="hm-case-btn active" data-case="baseline">Baseline Load</button>
+                <button class="hm-case-btn" data-case="post-solar" style="display: none">Post-Solar Load</button>
+              </div>
+              <div id="hm-solar-controls" style="display: none; align-items: center; gap: 8px">
+                <label for="hm-pv-kwdc" style="font-size: 11px; color: var(--gray-400); white-space: nowrap">Solar size:</label>
+                <input type="range" id="hm-pv-kwdc" min="50" max="2000" step="20" value="500" style="width: 120px" />
+                <span id="hm-pv-kwdc-val" style="font-size: 11px; min-width: 60px">500 kWdc</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px; margin-left: auto">
+                <button id="hm-onpeak-btn" class="hm-case-btn active" style="font-size: 10px; padding: 3px 8px">On-Peak Overlay</button>
+                <label for="hm-scheme" style="font-size: 11px; color: var(--gray-400)">Colors:</label>
+                <select id="hm-scheme" style="font-size: 11px; padding: 2px 4px; border: 1px solid var(--gray-200); border-radius: 4px">
+                  <option value="plasma">Plasma</option>
+                  <option value="viridis">Viridis</option>
+                  <option value="hot">Hot</option>
+                  <option value="reds">Reds</option>
+                  <option value="blues">Blues</option>
+                  <option value="greens">Greens</option>
+                </select>
+              </div>
+            </div>
+            <div class="heatmap-outer">
+              <div class="heatmap-yaxis" id="hm-yaxis"></div>
+              <div class="heatmap-main">
+                <canvas id="heatmap-canvas"></canvas>
+                <div class="heatmap-xaxis" id="hm-xaxis"></div>
+              </div>
+              <div class="hm-legend-right">
+                <span id="hm-max-lbl">—</span>
+                <div class="hm-gradient-v" id="hm-gradient-v"></div>
+                <span id="hm-min-lbl">0 kW</span>
+              </div>
+            </div>
+            <div class="hm-tou-legend">
+              <span style="color: var(--gray-400); font-size: 10px">TOU schedule from selected tariff</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Two sizing cards -->
+        <div class="sizing-row" id="section-sizing" style="display: none">
+          <!-- DCM card -->
+          <div class="card sz-accent-dcm" id="card-dcm">
+            <div class="card-head">
+              <span class="sz-badge sz-badge-dcm">Demand Charge Management</span>
+              <div class="info-wrap" style="margin-left: auto">
+                <span class="info-icon">i</span>
+                <div class="info-tip">
+                  <strong>DCM sizing logic</strong>
+                  <ul style="margin-top: 6px">
+                    <li><strong>Target Power:</strong> Nth-percentile of daily peak load values. This is the level you'd shave demand down to on your worst covered days.</li>
+                    <li><strong>Target Energy:</strong> Target power × on-peak window length (hours). Enough energy to sustain discharge for the full on-peak period.</li>
+                    <li><strong>Viable when</strong> on-peak demand charge ≥ $8/kW — otherwise savings don't justify the battery cost.</li>
+                    <li>N is set by the Coverage Ambition slider above.</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div id="dcm-content"></div>
+          </div>
+
+          <!-- TOU Arbitrage card -->
+          <div class="card sz-accent-arb" id="card-arb">
+            <div class="card-head">
+              <span class="sz-badge sz-badge-arb">TOU Arbitrage</span>
+              <div class="info-wrap" style="margin-left: auto">
+                <span class="info-icon">i</span>
+                <div class="info-tip">
+                  <strong>TOU Arbitrage sizing logic</strong>
+                  <ul style="margin-top: 6px">
+                    <li>
+                      <strong>Target Energy:</strong> Nth-percentile of daily on-peak consumption (kWh). This is how much energy the battery needs to fully offset on-peak consumption on your covered
+                      days.
+                    </li>
+                    <li><strong>Target Power:</strong> Target energy ÷ on-peak window length. Sets the inverter power rating needed to deliver that energy within the window.</li>
+                    <li><strong>Viable when</strong> on-peak minus off-peak energy spread ≥ $0.08/kWh — minimum margin after round-trip losses (~85% RTE).</li>
+                    <li>N is set by the Coverage Ambition slider above.</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div id="arb-content"></div>
+          </div>
+        </div>
+        <!-- /sizing-row -->
+
+        <!-- Monthly chart -->
+        <div class="card" id="section-monthly" style="display: none">
+          <div class="card-head"><div class="card-title">Monthly Load — Max vs. Average</div></div>
+          <div class="chart-wrap"><canvas id="monthly-chart"></canvas></div>
+        </div>
+      </div>
+      <!-- /accordion-body -->
+    </div>
+    <!-- /page -->
+
+    <div id="hm-tooltip"></div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
