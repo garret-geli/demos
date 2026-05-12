@@ -47,7 +47,7 @@ const S = {
   hmCase: 'baseline', // 'baseline' | 'post-solar'
   hmPvKwdc: 500, // heatmap-specific solar size
   hmScheme: 'plasma', // color scheme key
-  hmShowOnPeak: true, // on-peak overlay toggle
+  hmShowOnPeak: false, // on-peak overlay toggle
 };
 
 // ── Color schemes ─────────────────────────────────────────
@@ -313,6 +313,16 @@ function renderTariffTiles() {
     </div>`,
     )
     .join('');
+}
+
+// ── Toggle Edit Rates panel ──────────────────────────────
+function toggleRatesEdit() {
+  const panel = document.getElementById('rates-edit-panel');
+  const btn = document.getElementById('edit-rates-btn');
+  const open = panel.style.display === 'none';
+  panel.style.display = open ? '' : 'none';
+  btn.textContent = open ? 'Done' : 'Edit Rates';
+  btn.classList.toggle('active', open);
 }
 
 // ── Render: load overview stats ───────────────────────────
@@ -682,6 +692,9 @@ async function toggleAccordion() {
     await loadScenario('load_mall_15min_kW_2col_1300kW.csv');
   }
 }
+
+// Auto-open accordion on load
+toggleAccordion();
 
 // ── Data loading ──────────────────────────────────────────
 async function loadScenario(file) {

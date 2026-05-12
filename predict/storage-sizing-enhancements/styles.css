@@ -200,12 +200,48 @@ header small {
   height: 15px;
 }
 
+/* ── Tariff card ────────────────────────────────────────── */
+.tariff-card {
+  max-width: 480px;
+}
+.edit-rates-btn {
+  margin-left: auto;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--gray-600);
+  background: var(--gray-100);
+  border: 1px solid var(--gray-200);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.edit-rates-btn:hover {
+  background: var(--gray-200);
+}
+.edit-rates-btn.active {
+  background: var(--blue-lt);
+  border-color: var(--blue-bd);
+  color: var(--blue);
+}
+.tariff-info-tip {
+  left: 0 !important;
+  right: auto !important;
+  bottom: auto !important;
+  top: 22px !important;
+  width: 380px !important;
+  background: #fff !important;
+  color: var(--gray-900) !important;
+  border: 1px solid var(--gray-200);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  pointer-events: none;
+}
 /* ── Tariff summary ─────────────────────────────────────── */
 .tariff-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin-top: 10px;
+  gap: 6px;
+  margin-top: 0;
 }
 .tstat {
   background: var(--gray-50);

@@ -17,32 +17,36 @@
 
     <div class="page">
       <!-- ── Tariff ─────────────────────────────────────────────── -->
-      <div class="card">
-        <div class="card-head"><div class="card-title">Tariff</div></div>
-        <div class="row-2">
-          <div>
-            <div class="field">
-              <label for="tariff-select">Tariff Schedule</label>
-              <select id="tariff-select">
-                <option value="pge-b19">PG&amp;E B-19-TOU (NEM3)</option>
-                <option value="sdge-al">SDG&amp;E AL-TOU-2 (NEM3)</option>
-                <option value="sce-gs2e">SCE TOU-GS-2-E (NEM2)</option>
-              </select>
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">
-              <div class="field"><label for="r-nontou">Non-TOU Demand ($/kW)</label><input type="number" id="r-nontou" value="0" min="0" step="0.5" /></div>
-              <div class="field"><label for="r-onpkd">On-Peak Demand ($/kW)</label><input type="number" id="r-onpkd" value="16.00" min="0" step="0.5" /></div>
-              <div class="field"><label for="r-onpke">On-Peak Energy ($/kWh)</label><input type="number" id="r-onpke" value="0.380" min="0" step="0.01" /></div>
-              <div class="field"><label for="r-offpke">Off-Peak Energy ($/kWh)</label><input type="number" id="r-offpke" value="0.160" min="0" step="0.01" /></div>
-              <div class="field" style="grid-column: 1/-1">
-                <label for="r-soffpke">Super Off-Peak Energy ($/kWh) <span style="color: var(--gray-400)">(optional)</span></label
-                ><input type="number" id="r-soffpke" value="0.080" min="0" step="0.01" />
-              </div>
+      <div class="card tariff-card">
+        <div class="card-head">
+          <div class="card-title">Tariff</div>
+          <div class="info-wrap" style="margin-left: 6px">
+            <span class="info-icon">i</span>
+            <div class="info-tip tariff-info-tip">
+              <div style="font-weight: 600; margin-bottom: 8px">Rate Summary</div>
+              <div class="tariff-grid" id="tariff-tiles"></div>
             </div>
           </div>
-          <div>
-            <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--gray-400); margin-bottom: 8px">Summary</div>
-            <div class="tariff-grid" id="tariff-tiles"></div>
+          <button class="edit-rates-btn" id="edit-rates-btn" onclick="toggleRatesEdit()">Edit</button>
+        </div>
+        <div class="field" style="margin-bottom: 0">
+          <label for="tariff-select">Rate Schedule</label>
+          <select id="tariff-select">
+            <option value="pge-b19">PG&amp;E B-19-TOU (NEM3)</option>
+            <option value="sdge-al">SDG&amp;E AL-TOU-2 (NEM3)</option>
+            <option value="sce-gs2e">SCE TOU-GS-2-E (NEM2)</option>
+          </select>
+        </div>
+        <div id="rates-edit-panel" style="display: none; margin-top: 12px">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">
+            <div class="field"><label for="r-nontou">Non-TOU Demand ($/kW)</label><input type="number" id="r-nontou" value="0" min="0" step="0.5" /></div>
+            <div class="field"><label for="r-onpkd">On-Peak Demand ($/kW)</label><input type="number" id="r-onpkd" value="16.00" min="0" step="0.5" /></div>
+            <div class="field"><label for="r-onpke">On-Peak Energy ($/kWh)</label><input type="number" id="r-onpke" value="0.380" min="0" step="0.01" /></div>
+            <div class="field"><label for="r-offpke">Off-Peak Energy ($/kWh)</label><input type="number" id="r-offpke" value="0.160" min="0" step="0.01" /></div>
+            <div class="field" style="grid-column: 1/-1">
+              <label for="r-soffpke">Super Off-Peak Energy ($/kWh) <span style="color: var(--gray-400)">(optional)</span></label
+              ><input type="number" id="r-soffpke" value="0.080" min="0" step="0.01" />
+            </div>
           </div>
         </div>
       </div>
