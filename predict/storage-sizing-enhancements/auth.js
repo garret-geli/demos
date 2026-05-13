@@ -1,7 +1,5 @@
 // ── Auth configuration ────────────────────────────────────
-// Replace with your deployed Cloudflare Worker URL (see worker.js for deploy steps).
-// e.g. 'https://auth-proxy.yourname.workers.dev'
-const AUTH_URL = 'https://REPLACE_WITH_YOUR_WORKER_URL';
+const AUTH_URL = 'https://demos-worker.garret-blocher.workers.dev';
 
 const AUTH_KEYS = {
   access: 'auth_access_token',
