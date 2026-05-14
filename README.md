@@ -1,7 +1,6 @@
 # demos
 
-Static web demos deployed via GitHub Pages and embedded in Confluence pages as iframes.
-Each app is plain HTML/CSS/JS — no build step, no framework.
+Static web demos deployed via GitHub Pages and embedded in Confluence pages as iframes. Each app is plain HTML/CSS/JS — no build step, no framework.
 
 ---
 
@@ -64,17 +63,16 @@ That's it. The overlay shows on load if no token is present, hides on successful
 `worker.js` at the repo root is deployed once and shared by all apps. It auto-redeploys on every push to `main` via the Cloudflare → Workers & Pages → Git integration.
 
 **First-time deploy (already done — for reference):**
+
 1. [dash.cloudflare.com](https://dash.cloudflare.com) → **Workers & Pages** → **Create** → **Connect to Git**
 2. Select this repo, name it `demos-worker`, entry point `worker.js`, branch `main`
 3. Deployed URL: `https://demos-worker.garret-blocher.workers.dev`
 
 **To restrict which origins can call the worker** (recommended once GitHub Pages URL is set):
+
 ```js
 // worker.js
-const ALLOWED_ORIGINS = new Set([
-  'https://garret-geli.github.io',
-  'http://localhost:8080',
-]);
+const ALLOWED_ORIGINS = new Set(['https://garret-geli.github.io', 'http://localhost:8080']);
 ```
 
 ---

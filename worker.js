@@ -23,16 +23,12 @@
  *   new Set(['https://your-org.github.io', 'http://localhost:8080'])
  */
 
-const UPSTREAM_URL =
-  'https://apigateway.geli.net/authserv/authentication/api/v1/login';
+const UPSTREAM_URL = 'https://apigateway.geli.net/authserv/authentication/api/v1/login';
 
 const ALLOWED_ORIGINS = new Set(['*']);
 
 function corsHeaders(requestOrigin) {
-  const allow =
-    ALLOWED_ORIGINS.has('*') || ALLOWED_ORIGINS.has(requestOrigin)
-      ? requestOrigin || '*'
-      : '';
+  const allow = ALLOWED_ORIGINS.has('*') || ALLOWED_ORIGINS.has(requestOrigin) ? requestOrigin || '*' : '';
 
   return {
     'Access-Control-Allow-Origin': allow,
@@ -76,13 +72,10 @@ export default {
         body,
       });
     } catch (err) {
-      return new Response(
-        JSON.stringify({ error: 'Upstream unreachable', detail: String(err) }),
-        {
-          status: 502,
-          headers: { 'Content-Type': 'application/json', ...corsHeaders(origin) },
-        },
-      );
+      return new Response(JSON.stringify({ error: 'Upstream unreachable', detail: String(err) }), {
+        status: 502,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders(origin) },
+      });
     }
 
     const responseBody = await upstreamResponse.text();
@@ -90,8 +83,7 @@ export default {
     return new Response(responseBody, {
       status: upstreamResponse.status,
       headers: {
-        'Content-Type':
-          upstreamResponse.headers.get('Content-Type') || 'application/json',
+        'Content-Type': upstreamResponse.headers.get('Content-Type') || 'application/json',
         ...corsHeaders(origin),
       },
     });
