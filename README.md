@@ -1,6 +1,7 @@
 # demos
 
-Static web demos deployed via GitHub Pages, intended to be embedded in Confluence pages as iframes.
+Static web demos deployed via GitHub Pages and embedded in Confluence pages as iframes.
+Each app is plain HTML/CSS/JS — no build step, no framework.
 
 ---
 
@@ -8,90 +9,71 @@ Static web demos deployed via GitHub Pages, intended to be embedded in Confluenc
 
 ```
 demos/
-├── worker.js              # Shared Cloudflare Worker (CORS proxy — see below)
+├── worker.js              # Shared Cloudflare Worker — CORS proxy for auth
+├── wrangler.jsonc         # Cloudflare Worker config
 ├── predict/
 │   └── storage-sizing-enhancements/
 │       ├── index.html
 │       ├── app.js
-│       ├── auth.js        # Auth gate (shared pattern — see below)
+│       ├── auth.js        # Auth gate — copy this to every new app
 │       └── styles.css
 └── insight/               # Future apps live here
 ```
 
 ---
 
-## Auth pattern
-
-Each app is gated behind a login screen backed by the company auth service at:
+## Architecture
 
 ```
-https://apigateway.geli.net/authserv/authentication/api/v1/login
+Browser (GitHub Pages / Confluence iframe)
+        │
+        │  POST credentials
+        ▼
+Cloudflare Worker  ← adds CORS headers
+        │
+        │  POST server-to-server (no CORS)
+        ▼
+apigateway.geli.net/authserv/.../login
+        │
+        └─ returns { accessToken, idToken, refreshToken }
 ```
 
-### How it works
+**Why the worker is needed:** `apigateway.geli.net` was built for server-to-server calls and doesn't set `Access-Control-Allow-Origin` headers. Browsers block direct `fetch()` calls from a web page to any endpoint missing those headers. The Cloudflare Worker sits in between — the browser calls it, it forwards to the gateway (server-to-server, no CORS restrictions), and it staples the required headers onto the response. The gateway itself never needs to change.
 
-1. On load, `auth.js` checks `sessionStorage` for an existing `auth_access_token`.
-2. If none is found, a fullscreen login overlay is shown over the app.
-3. On form submit, a `POST` is sent to `AUTH_URL` (the Cloudflare Worker proxy — see below) with:
-   ```json
-   { "clientType": "User", "id": "<user-id>", "password": "<password>" }
-   ```
-4. On success, `accessToken`, `idToken`, and `refreshToken` are stored in `sessionStorage`.
-5. The overlay is hidden and the app renders normally.
-6. A **Sign out** button in the header clears `sessionStorage` and re-shows the overlay.
-
-`sessionStorage` is scoped per tab/iframe, so each Confluence page load requires a fresh sign-in. This is intentional — no persistent tokens.
-
-### Adding auth to a new app
-
-1. Copy `auth.js` from an existing app into the new app's folder.
-2. Make sure `AUTH_URL` at the top of `auth.js` points to the deployed Cloudflare Worker URL.
-3. Add to `index.html`:
-   - `<script src="auth.js"></script>` in `<head>` (before `app.js`)
-   - The auth overlay markup before the main content (copy from an existing `index.html`)
-   - A **Sign out** button in the header: `<button class="signout-btn" onclick="logout()">Sign out</button>`
-4. Add auth + sign-out styles to `styles.css` (copy the `/* ── Auth Overlay */` and `/* ── Sign-out button */` blocks from an existing app).
+**Why `sessionStorage`:** Tokens are scoped to the tab/iframe lifetime. When a Confluence page is closed, tokens are gone and the next visit requires a fresh login. No persistent credentials sitting in `localStorage`.
 
 ---
 
-## Cloudflare Worker (CORS proxy)
+## Adding auth to a new app
 
-### Why it exists
+1. **Copy `auth.js`** from an existing app into the new app's folder. `AUTH_URL` at the top already points at the deployed worker — no changes needed.
 
-The auth endpoint does not set `Access-Control-Allow-Origin` headers, so browsers block direct `fetch()` calls from a GitHub Pages origin. The worker sits in between: the browser calls the worker, the worker calls the gateway server-to-server (no CORS restrictions), and the worker adds the required CORS headers to its response.
+2. **Add to `index.html`:**
+   - In `<head>`: `<script src="auth.js"></script>` (before `app.js`)
+   - First element in `<body>`: the auth overlay `<div id="auth-overlay">...</div>` (copy from an existing app)
+   - In the header: `<button class="signout-btn" onclick="logout()">Sign out</button>`
 
-### worker.js — repo root
+3. **Add to `styles.css`:** copy the `/* ── Auth Overlay */` and `/* ── Sign-out button */` blocks from an existing app.
 
-`worker.js` at the repo root is the single shared proxy for all apps in this repo. It handles:
-- `OPTIONS` preflight requests
-- `POST` forwarding to the upstream auth endpoint
-- CORS headers on every response
+That's it. The overlay shows on load if no token is present, hides on successful login, and reappears on sign out.
 
-### Deployment (Cloudflare Workers — GitHub integration)
+---
 
-1. Log in to [dash.cloudflare.com](https://dash.cloudflare.com)
-2. **Workers & Pages** → **Create** → **Worker** → **Connect to Git**
-3. Select this repository (`demos`)
-4. Set the **entry point** to `worker.js`
-5. Set the **branch** to `main` — Cloudflare will redeploy automatically on every push that touches `worker.js`
-6. After the first deploy, copy the assigned `*.workers.dev` URL
+## Cloudflare Worker
 
-### After deploying
+`worker.js` at the repo root is deployed once and shared by all apps. It auto-redeploys on every push to `main` via the Cloudflare → Workers & Pages → Git integration.
 
-Set `AUTH_URL` in every app's `auth.js` to the worker URL:
+**First-time deploy (already done — for reference):**
+1. [dash.cloudflare.com](https://dash.cloudflare.com) → **Workers & Pages** → **Create** → **Connect to Git**
+2. Select this repo, name it `demos-worker`, entry point `worker.js`, branch `main`
+3. Deployed URL: `https://demos-worker.garret-blocher.workers.dev`
 
+**To restrict which origins can call the worker** (recommended once GitHub Pages URL is set):
 ```js
-const AUTH_URL = 'https://your-worker.workers.dev';
-```
-
-### Locking down allowed origins (optional but recommended)
-
-By default the worker accepts requests from any origin (`'*'`). Once the GitHub Pages URL is known, restrict it in `worker.js`:
-
-```js
+// worker.js
 const ALLOWED_ORIGINS = new Set([
-  'https://your-org.github.io',
-  'http://localhost:8080', // for local dev
+  'https://garret-geli.github.io',
+  'http://localhost:8080',
 ]);
 ```
 
@@ -99,7 +81,7 @@ const ALLOWED_ORIGINS = new Set([
 
 ## Local development
 
-Serve any app with a local HTTP server (required — opening `index.html` directly as a `file://` URL causes browsers to send origin `null`, which the worker rejects):
+Never open `index.html` directly — browsers send origin `null` from `file://` URLs, which the worker rejects. Always use a local server:
 
 ```bash
 cd predict/storage-sizing-enhancements
