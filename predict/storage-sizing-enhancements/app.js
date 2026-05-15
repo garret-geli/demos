@@ -705,7 +705,7 @@ async function loadScenario(file) {
     S.monthlyChart = null;
   }
   try {
-    S.loadRows = parseRows(await fetchCSV('./data/' + file));
+    S.loadRows = parseRows(await fetchCSV('data/' + file));
     ['section-coverage', 'section-load', 'section-sizing', 'section-monthly'].forEach((id) => (document.getElementById(id).style.display = ''));
     document.getElementById('accordion-loading').style.display = 'none';
     compute();
@@ -717,7 +717,7 @@ async function loadScenario(file) {
 async function loadPV() {
   if (S.pvRows.length) return;
   try {
-    S.pvRows = parseRows(await fetchCSV('./data/pv_2col_60min_1000kW.csv'));
+    S.pvRows = parseRows(await fetchCSV('data/pv_2col_60min_1000kW.csv'));
   } catch (e) {
     console.warn('PV load failed:', e.message);
   }
