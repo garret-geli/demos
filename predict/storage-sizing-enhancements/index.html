@@ -4,232 +4,424 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Storage Sizing — Stage 1 Heuristics</title>
+    <link rel="icon" type="image/png" href="assets/q_favicon.png" />
     <link rel="stylesheet" href="styles.css" />
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
     <script src="auth.js"></script>
   </head>
   <body>
-    <!-- ── Auth Overlay ─────────────────────────────────────── -->
-    <div id="auth-overlay">
+    <!-- Auth overlay disabled for demo (handled by auth.js stub) -->
+    <div id="auth-overlay" style="display: none">
       <div class="auth-card">
-        <div class="auth-logo"></div>
+        <img class="auth-logo" src="assets/qcells-logo-gradient.png" alt="Qcells" />
         <h2 class="auth-title">Sign in to continue</h2>
-        <p class="auth-subtitle">Storage Sizing &mdash; Stage 1 Heuristics</p>
+        <p class="auth-subtitle">Storage Sizing</p>
         <div id="auth-error" class="auth-error"></div>
         <form id="auth-form" autocomplete="on" novalidate>
-          <div class="auth-field">
-            <label for="auth-userid">User ID</label>
-            <input type="text" id="auth-userid" placeholder="user@example.com" autocomplete="username" required />
-          </div>
-          <div class="auth-field">
-            <label for="auth-password">Password</label>
-            <input type="password" id="auth-password" autocomplete="current-password" required />
-          </div>
+          <div class="auth-field"><label for="auth-userid">User ID</label><input type="text" id="auth-userid" autocomplete="username" required /></div>
+          <div class="auth-field"><label for="auth-password">Password</label><input type="password" id="auth-password" autocomplete="current-password" required /></div>
           <button type="submit" id="auth-submit" class="auth-btn">Sign In</button>
         </form>
       </div>
     </div>
 
     <header>
-      <div class="logo"></div>
-      <h1>Storage Sizing — Stage 1 Heuristics</h1>
+      <img class="logo" src="assets/qcells-logo-gradient.png" alt="Qcells" />
+      <h1>Storage Sizing</h1>
       <small>Demo · May 2026</small>
       <button class="signout-btn" onclick="logout()">Sign out</button>
     </header>
 
-    <div class="page">
-      <!-- ── Tariff ─────────────────────────────────────────────── -->
-      <div class="card tariff-card">
-        <div class="card-head">
-          <div class="card-title">Tariff</div>
-          <div class="info-wrap" style="margin-left: 6px">
-            <span class="info-icon">i</span>
-            <div class="info-tip tariff-info-tip">
-              <div style="font-weight: 600; margin-bottom: 8px">Rate Summary</div>
-              <div class="tariff-grid" id="tariff-tiles"></div>
-            </div>
+    <!-- ═══════════════════════════════════════════════════════
+         STEP RAIL — one connected vertical flow
+    ═════════════════════════════════════════════════════════ -->
+    <div class="flow">
+      <!-- ── STEP 1 · SITE PROFILE ─────────────────────────── -->
+      <section class="flow-step" id="step1">
+        <header class="step-header">
+          <div class="step-num">1</div>
+          <div class="step-meta">
+            <div class="step-eyebrow">Step 1 · Existing</div>
+            <h2 class="step-title">Site Profile</h2>
+            <p class="step-sub">Tariff, load shape, and PV — the conditions every simulation will run against.</p>
           </div>
-          <button class="edit-rates-btn" id="edit-rates-btn" onclick="toggleRatesEdit()">Edit</button>
-        </div>
-        <div class="field" style="margin-bottom: 0">
-          <label for="tariff-select">Rate Schedule</label>
-          <select id="tariff-select">
-            <option value="pge-b19">PG&amp;E B-19-TOU (NEM3)</option>
-            <option value="sdge-al">SDG&amp;E AL-TOU-2 (NEM3)</option>
-            <option value="sce-gs2e">SCE TOU-GS-2-E (NEM2)</option>
-          </select>
-        </div>
-        <div id="rates-edit-panel" style="display: none; margin-top: 12px">
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">
-            <div class="field"><label for="r-nontou">Non-TOU Demand ($/kW)</label><input type="number" id="r-nontou" value="0" min="0" step="0.5" /></div>
-            <div class="field"><label for="r-onpkd">On-Peak Demand ($/kW)</label><input type="number" id="r-onpkd" value="16.00" min="0" step="0.5" /></div>
-            <div class="field"><label for="r-onpke">On-Peak Energy ($/kWh)</label><input type="number" id="r-onpke" value="0.380" min="0" step="0.01" /></div>
-            <div class="field"><label for="r-offpke">Off-Peak Energy ($/kWh)</label><input type="number" id="r-offpke" value="0.160" min="0" step="0.01" /></div>
-            <div class="field" style="grid-column: 1/-1">
-              <label for="r-soffpke">Super Off-Peak Energy ($/kWh) <span style="color: var(--gray-400)">(optional)</span></label
-              ><input type="number" id="r-soffpke" value="0.080" min="0" step="0.01" />
-            </div>
-          </div>
-        </div>
-      </div>
+        </header>
 
-      <!-- ── Load Profile + Solar ───────────────────────────────── -->
-      <div class="row-2">
-        <div class="card">
-          <div class="card-head"><div class="card-title">Load Profile</div></div>
-          <div class="chips" id="scenario-chips">
-            <div class="chip active" data-file="load_mall_15min_kW_2col_1300kW.csv">Mall</div>
-            <div class="chip" data-file="load_office_15min_kWh_2col_1100kW_2025.csv">Office</div>
-            <div class="chip" data-file="load_rock_crusher_15min_kW_2col_1900kW.csv">Rock Crusher</div>
-            <div class="chip" data-file="load_school_15min_kW_2col_1100kW.csv">School</div>
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-head"><div class="card-title">Solar (PV)</div></div>
-          <div class="toggle-row">
-            <input type="checkbox" id="solar-toggle" />
-            <label for="solar-toggle">Include Solar</label>
-          </div>
-          <div id="solar-size-field" style="display: none">
-            <div class="field"><label for="solar-kw">System size (kWdc) — scales 1,000 kW reference profile linearly</label><input type="number" id="solar-kw" value="500" min="1" max="10000" /></div>
-          </div>
-          <div style="font-size: 12px; color: var(--gray-400); margin-top: 4px">When enabled, outputs reflect net load (load minus generation).</div>
-        </div>
-      </div>
-
-      <!-- ── Accordion ─────────────────────────────────────────── -->
-      <button class="expand-btn" id="accordion-btn" onclick="toggleAccordion()">
-        <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M9 7h10M9 12h10M9 17h10M5 7h.01M5 12h.01M5 17h.01" />
-        </svg>
-        Storage Sizing Analysis
-        <span style="font-size: 12px; font-weight: 400; opacity: 0.75">— battery sizing heuristics based on load &amp; tariff</span>
-        <span class="expand-chevron" id="accordion-chevron">▼</span>
-      </button>
-
-      <div class="accordion-body" id="accordion-body">
-        <div id="accordion-loading" class="loading">Loading data…</div>
-
-        <!-- Coverage Ambition slider -->
-        <div class="coverage-bar" id="section-coverage" style="display: none">
-          <label for="cov-range">Coverage Ambition</label>
-          <input type="range" id="cov-range" min="50" max="95" step="5" value="80" />
-          <span class="cov-val" id="cov-display">80%</span>
-          <span class="hint">50% = economical · 95% = size for worst days</span>
-        </div>
-
-        <!-- Load stats + heatmap -->
-        <div id="section-load" style="display: none">
-          <div class="card" style="margin-bottom: 12px">
-            <div class="card-head"><div class="card-title">Site Load Overview</div></div>
-            <div class="stats-row" id="load-stats"></div>
-          </div>
-          <div class="card">
+        <div class="step-body">
+          <!-- Tariff -->
+          <div class="card tariff-card">
             <div class="card-head">
-              <div class="card-title" id="heatmap-title">Load Heatmap — Date × Hour of Day</div>
-            </div>
-            <!-- Heatmap controls -->
-            <div class="hm-controls">
-              <div class="hm-case-toggle">
-                <button class="hm-case-btn active" data-case="baseline">Baseline Load</button>
-                <button class="hm-case-btn" data-case="post-solar" style="display: none">Post-Solar Load</button>
-              </div>
-              <div id="hm-solar-controls" style="display: none; align-items: center; gap: 8px">
-                <label for="hm-pv-kwdc" style="font-size: 11px; color: var(--gray-400); white-space: nowrap">Solar size:</label>
-                <input type="range" id="hm-pv-kwdc" min="50" max="2000" step="20" value="500" style="width: 120px" />
-                <span id="hm-pv-kwdc-val" style="font-size: 11px; min-width: 60px">500 kWdc</span>
-              </div>
-              <div style="display: flex; align-items: center; gap: 6px; margin-left: auto">
-                <button id="hm-onpeak-btn" class="hm-case-btn active" style="font-size: 10px; padding: 3px 8px">On-Peak Overlay</button>
-                <label for="hm-scheme" style="font-size: 11px; color: var(--gray-400)">Colors:</label>
-                <select id="hm-scheme" style="font-size: 11px; padding: 2px 4px; border: 1px solid var(--gray-200); border-radius: 4px">
-                  <option value="plasma">Plasma</option>
-                  <option value="viridis">Viridis</option>
-                  <option value="hot">Hot</option>
-                  <option value="reds">Reds</option>
-                  <option value="blues">Blues</option>
-                  <option value="greens">Greens</option>
-                </select>
-              </div>
-            </div>
-            <div class="heatmap-outer">
-              <div class="heatmap-yaxis" id="hm-yaxis"></div>
-              <div class="heatmap-main">
-                <canvas id="heatmap-canvas"></canvas>
-                <div class="heatmap-xaxis" id="hm-xaxis"></div>
-              </div>
-              <div class="hm-legend-right">
-                <span id="hm-max-lbl">—</span>
-                <div class="hm-gradient-v" id="hm-gradient-v"></div>
-                <span id="hm-min-lbl">0 kW</span>
-              </div>
-            </div>
-            <div class="hm-tou-legend">
-              <span style="color: var(--gray-400); font-size: 10px">TOU schedule from selected tariff</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Two sizing cards -->
-        <div class="sizing-row" id="section-sizing" style="display: none">
-          <!-- DCM card -->
-          <div class="card sz-accent-dcm" id="card-dcm">
-            <div class="card-head">
-              <span class="sz-badge sz-badge-dcm">Demand Charge Management</span>
-              <div class="info-wrap" style="margin-left: auto">
+              <div class="card-title">Tariff</div>
+              <div class="info-wrap" style="margin-left: 6px">
                 <span class="info-icon">i</span>
-                <div class="info-tip">
-                  <strong>DCM sizing logic</strong>
-                  <ul style="margin-top: 6px">
-                    <li><strong>Target Power:</strong> Nth-percentile of daily peak load values. This is the level you'd shave demand down to on your worst covered days.</li>
-                    <li><strong>Target Energy:</strong> Target power × on-peak window length (hours). Enough energy to sustain discharge for the full on-peak period.</li>
-                    <li><strong>Viable when</strong> on-peak demand charge ≥ $8/kW — otherwise savings don't justify the battery cost.</li>
-                    <li>N is set by the Coverage Ambition slider above.</li>
-                  </ul>
+                <div class="info-tip tariff-info-tip">
+                  <div style="font-weight: 600; margin-bottom: 8px">Rate Summary</div>
+                  <div class="tariff-grid" id="tariff-tiles"></div>
+                </div>
+              </div>
+              <button class="edit-rates-btn" id="edit-rates-btn" onclick="toggleRatesEdit()">Edit</button>
+            </div>
+            <div class="field" style="margin-bottom: 0">
+              <label for="tariff-select">Rate Schedule</label>
+              <select id="tariff-select">
+                <option value="pge-b19">PG&amp;E B-19-TOU (NEM3)</option>
+                <option value="sdge-al">SDG&amp;E AL-TOU-2 (NEM3)</option>
+                <option value="sce-gs2e">SCE TOU-GS-2-E (NEM2)</option>
+              </select>
+            </div>
+            <div id="rates-edit-panel" style="display: none; margin-top: 12px">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">
+                <div class="field"><label for="r-nontou">Non-TOU Demand ($/kW)</label><input type="number" id="r-nontou" value="0" min="0" step="0.5" /></div>
+                <div class="field"><label for="r-onpkd">On-Peak Demand ($/kW)</label><input type="number" id="r-onpkd" value="16.00" min="0" step="0.5" /></div>
+                <div class="field"><label for="r-onpke">On-Peak Energy ($/kWh)</label><input type="number" id="r-onpke" value="0.380" min="0" step="0.01" /></div>
+                <div class="field"><label for="r-offpke">Off-Peak Energy ($/kWh)</label><input type="number" id="r-offpke" value="0.160" min="0" step="0.01" /></div>
+                <div class="field" style="grid-column: 1/-1">
+                  <label for="r-soffpke">Super Off-Peak Energy ($/kWh) <span style="color: var(--gray-400)">(optional)</span></label
+                  ><input type="number" id="r-soffpke" value="0.080" min="0" step="0.01" />
                 </div>
               </div>
             </div>
-            <div id="dcm-content"></div>
           </div>
 
-          <!-- TOU Arbitrage card -->
-          <div class="card sz-accent-arb" id="card-arb">
-            <div class="card-head">
-              <span class="sz-badge sz-badge-arb">TOU Arbitrage</span>
-              <div class="info-wrap" style="margin-left: auto">
-                <span class="info-icon">i</span>
-                <div class="info-tip">
-                  <strong>TOU Arbitrage sizing logic</strong>
-                  <ul style="margin-top: 6px">
-                    <li>
-                      <strong>Target Energy:</strong> Nth-percentile of daily on-peak consumption (kWh). This is how much energy the battery needs to fully offset on-peak consumption on your covered
-                      days.
-                    </li>
-                    <li><strong>Target Power:</strong> Target energy ÷ on-peak window length. Sets the inverter power rating needed to deliver that energy within the window.</li>
-                    <li><strong>Viable when</strong> on-peak minus off-peak energy spread ≥ $0.08/kWh — minimum margin after round-trip losses (~85% RTE).</li>
-                    <li>N is set by the Coverage Ambition slider above.</li>
-                  </ul>
-                </div>
+          <!-- Load + Solar -->
+          <div class="row-2">
+            <div class="card">
+              <div class="card-head"><div class="card-title">Load Profile</div></div>
+              <div class="chips" id="scenario-chips">
+                <div class="chip active" data-file="load_mall_15min_kW_2col_1300kW.csv">Mall</div>
+                <div class="chip" data-file="load_office_15min_kWh_2col_1100kW_2025.csv">Office</div>
+                <div class="chip" data-file="load_rock_crusher_15min_kW_2col_1900kW.csv">Rock Crusher</div>
+                <div class="chip" data-file="load_school_15min_kW_2col_1100kW.csv">School</div>
               </div>
             </div>
-            <div id="arb-content"></div>
+            <div class="card">
+              <div class="card-head"><div class="card-title">Solar (PV)</div></div>
+              <div class="toggle-row"><input type="checkbox" id="solar-toggle" /><label for="solar-toggle">Include Solar</label></div>
+              <div id="solar-size-field" style="display: none">
+                <div class="field">
+                  <label for="solar-kw">System size (kWdc) — scales 1,000 kW reference profile linearly</label><input type="number" id="solar-kw" value="500" min="1" max="10000" />
+                </div>
+              </div>
+              <div style="font-size: 12px; color: var(--gray-400); margin-top: 4px">When enabled, outputs reflect net load (load minus generation).</div>
+            </div>
+          </div>
+
+          <!-- Site context disclosure — load heatmap + monthly profile -->
+          <div class="site-context" id="section-load" style="display: none">
+            <button class="sc-toggle" id="sc-toggle" onclick="toggleSiteContext()">
+              <span class="sc-caret" id="sc-caret">▶</span>
+              <span class="sc-toggle-lbl">Site context</span>
+              <span class="sc-toggle-sub">load heatmap, monthly profile, TOU overlay</span>
+            </button>
+
+            <div class="sc-body" id="sc-body" style="display: none">
+              <div class="card">
+                <div class="card-head">
+                  <div class="card-title" id="heatmap-title">Load Heatmap — Date × Hour of Day</div>
+                </div>
+                <div class="hm-controls">
+                  <div class="hm-case-toggle">
+                    <button class="hm-case-btn active" data-case="baseline">Baseline Load</button>
+                    <button class="hm-case-btn" data-case="post-solar" style="display: none">Post-Solar Load</button>
+                  </div>
+                  <div id="hm-solar-controls" style="display: none; align-items: center; gap: 8px">
+                    <label for="hm-pv-kwdc" style="font-size: 11px; color: var(--gray-400); white-space: nowrap">Solar size:</label>
+                    <input type="range" id="hm-pv-kwdc" min="50" max="2000" step="20" value="500" style="width: 120px" />
+                    <span id="hm-pv-kwdc-val" style="font-size: 11px; min-width: 60px">500 kWdc</span>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 6px; margin-left: auto">
+                    <button id="hm-onpeak-btn" class="hm-case-btn active" style="font-size: 10px; padding: 3px 8px">On-Peak Overlay</button>
+                    <label for="hm-scheme" style="font-size: 11px; color: var(--gray-400)">Colors:</label>
+                    <select id="hm-scheme" style="font-size: 11px; padding: 2px 4px; border: 1px solid var(--gray-200); border-radius: 4px">
+                      <option value="plasma">Plasma</option>
+                      <option value="viridis">Viridis</option>
+                      <option value="hot">Hot</option>
+                      <option value="reds">Reds</option>
+                      <option value="blues">Blues</option>
+                      <option value="greens">Greens</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="heatmap-outer">
+                  <div class="heatmap-yaxis" id="hm-yaxis"></div>
+                  <div class="heatmap-main">
+                    <canvas id="heatmap-canvas"></canvas>
+                    <div class="heatmap-xaxis" id="hm-xaxis"></div>
+                  </div>
+                  <div class="hm-legend-right">
+                    <span id="hm-max-lbl">—</span>
+                    <div class="hm-gradient-v" id="hm-gradient-v"></div>
+                    <span id="hm-min-lbl">0 kW</span>
+                  </div>
+                </div>
+                <div class="hm-tou-legend"><span style="color: var(--gray-400); font-size: 10px">TOU schedule from selected tariff</span></div>
+              </div>
+
+              <div class="card" id="section-monthly" style="display: none; margin-top: 12px">
+                <div class="card-head"><div class="card-title">Monthly Load — Max vs. Average</div></div>
+                <div class="chart-wrap"><canvas id="monthly-chart"></canvas></div>
+              </div>
+            </div>
           </div>
         </div>
-        <!-- /sizing-row -->
+      </section>
 
-        <!-- Monthly chart -->
-        <div class="card" id="section-monthly" style="display: none">
-          <div class="card-head"><div class="card-title">Monthly Load — Max vs. Average</div></div>
-          <div class="chart-wrap"><canvas id="monthly-chart"></canvas></div>
+      <!-- ── STEP 2 · PICK A BATTERY SIZE ─────────────────── -->
+      <section class="flow-step" id="step2">
+        <header class="step-header" id="accordion-btn">
+          <div class="step-num">2</div>
+          <div class="step-meta">
+            <div class="step-eyebrow">Step 2 · Heuristic sizing</div>
+            <h2 class="step-title">Pick a Battery Size</h2>
+            <p class="step-sub">A starting size from your load &amp; tariff — the single-config sim Predict has always run. Step 3 then varies around it.</p>
+          </div>
+          <div class="step-chevron open" id="accordion-chevron">▼</div>
+        </header>
+
+        <div class="step-body accordion-body open" id="accordion-body">
+          <div id="accordion-loading" class="loading">Loading data…</div>
+
+          <!-- Compact strip: coverage slider + load summary -->
+          <div class="sizing-strip" id="section-coverage" style="display: none">
+            <div class="strip-coverage">
+              <label for="cov-range" class="strip-label">Coverage</label>
+              <input type="range" id="cov-range" min="50" max="95" step="5" value="80" />
+              <span class="cov-val" id="cov-display">80%</span>
+              <span class="strip-hint">50% economical · 95% worst days</span>
+            </div>
+            <div class="strip-divider"></div>
+            <div class="strip-stats" id="strip-stats"></div>
+          </div>
+
+          <!-- The answer: ONE recommended size -->
+          <div class="sizing-rec" id="section-sizing" style="display: none">
+            <div class="card sz-rec-card sz-accent-dcm" id="card-rec">
+              <div class="card-head">
+                <span class="sz-badge sz-badge-rec">Recommended size</span>
+                <span id="rec-strategy" class="sz-strategy-slot"></span>
+                <div class="info-wrap" style="margin-left: auto">
+                  <span class="info-icon">i</span>
+                  <div class="info-tip">
+                    <strong>How this size is chosen</strong>
+                    <ul style="margin-top: 6px">
+                      <li>
+                        If on-peak demand charge ≥ $8/kW → size for <strong>demand-charge management</strong> (peak shaving): power at the Nth percentile of daily peaks, energy = power × battery
+                        duration.
+                      </li>
+                      <li>
+                        Otherwise, if on/off-peak energy spread ≥ $0.08/kWh → size for <strong>TOU arbitrage</strong>: energy at the Nth percentile of daily on-peak consumption, power = energy ÷
+                        battery duration.
+                      </li>
+                      <li>Battery duration is capped at <strong>4 hours</strong> — the dominant commercial Li-ion offering.</li>
+                      <li>N is set by the Coverage slider above.</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              <div id="rec-content"></div>
+            </div>
+          </div>
+
+          <!-- Hidden mount point for load-stats kept for app.js render call -->
+          <div id="load-stats" style="display: none"></div>
         </div>
-      </div>
-      <!-- /accordion-body -->
+      </section>
+
+      <!-- ── STEP 3 · BUILD A BATCH ────────────────────────── -->
+      <section class="flow-step" id="step3">
+        <header class="step-header" id="t2-accordion-btn">
+          <div class="step-num">3</div>
+          <div class="step-meta">
+            <div class="step-eyebrow">Step 3 · Batch simulation</div>
+            <h2 class="step-title">Run Variations</h2>
+            <p class="step-sub">Predict has only ever run one config at a time. Now: vary parameters around the starting size and simulate in bulk.</p>
+          </div>
+          <div class="step-chevron" id="t2-accordion-chevron">▼</div>
+        </header>
+
+        <div class="step-body accordion-body" id="t2-accordion-body">
+          <!-- Mode selector -->
+          <div class="t2-mode-bar">
+            <button class="t2-mode-btn active" data-mode="directed" onclick="t2_openDirected()">
+              Directed Batch
+              <span class="t2-mode-sub">hand-craft each config</span>
+            </button>
+            <button class="t2-mode-btn" data-mode="matrix" onclick="t2_openMatrix()">
+              Matrix Batch
+              <span class="t2-mode-sub">sweep parameter axes</span>
+            </button>
+          </div>
+
+          <!-- ── Directed Batch Panel ──────────────────────── -->
+          <div id="t2-directed-panel">
+            <div class="t2-section-bar">
+              <div>
+                <div class="t2-section-title">Directed Batch</div>
+                <div class="t2-section-sub">Each card is one simulation. Click any pill to edit · "More" reveals advanced parameters.</div>
+              </div>
+              <div class="t2-section-actions">
+                <button class="t2-ghost-btn" onclick="t2_suggestSizes()">↻ Seed from Step 2</button>
+                <button class="t2-ghost-btn" onclick="t2_addCol()">+ Add config</button>
+                <button class="t2-btn-secondary" onclick="openJsonPreview()">Preview JSON</button>
+                <button class="t2-btn-primary" id="t2-dir-run-btn" onclick="t2_runDirected()" disabled>▶ Run Batch</button>
+              </div>
+            </div>
+            <div id="t2-dir-empty" class="t2-empty-state">No configurations yet — click <strong>Suggest from anchor</strong>, or <strong>+ Add config</strong> to start blank.</div>
+            <div id="t2-dir-stack" class="t2-cfg-stack"></div>
+          </div>
+
+          <!-- ── Matrix Batch Panel ───────────────────────── -->
+          <div id="t2-matrix-panel" style="display: none">
+            <div class="t2-section-bar">
+              <div>
+                <div class="t2-section-title">Matrix Batch</div>
+                <div class="t2-section-sub">Pick values on each axis — every combination becomes one simulation in the batch.</div>
+              </div>
+            </div>
+            <div class="t2-axis-grid" id="t2-axis-grid"></div>
+            <div class="t2-batch-preview">
+              <div class="t2-batch-count">
+                <div class="t2-batch-num" id="t2-matrix-count-num">0</div>
+                <div class="t2-batch-num-lbl">simulation configurations</div>
+              </div>
+              <div class="t2-batch-formula" id="t2-matrix-formula"></div>
+              <div class="t2-batch-actions">
+                <button class="t2-btn-secondary" onclick="openJsonPreview()">Preview JSON</button>
+                <button class="t2-btn-primary" id="t2-matrix-run-btn" onclick="t2_runMatrix()" disabled>▶ Run Batch Simulation</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Results -->
+          <div id="t2-results-panel" style="display: none">
+            <div class="card" style="padding: 0; overflow: hidden">
+              <div class="card-head" style="padding: 12px 16px"><div class="card-title">Results — Comparison Table</div></div>
+              <div id="t2-comp-table-wrap" class="t2-comp-wrap"></div>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
-    <!-- /page -->
+    <!-- /flow -->
 
     <div id="hm-tooltip"></div>
 
+    <!-- ── Battery Catalogue Modal ────────────────────────── -->
+    <div id="t2-catalogue-modal" style="display: none" class="t2-overlay">
+      <div class="t2-modal t2-modal-wide">
+        <div class="t2-modal-hdr">
+          <span class="t2-modal-title">Battery Catalogue</span>
+          <input type="search" id="t2-cat-search" class="t2-search-inp" placeholder="Filter by manufacturer or model…" oninput="renderCatalogueModal(this.value)" />
+          <button class="t2-close-btn" onclick="closeCatalogue()">✕</button>
+        </div>
+        <div id="t2-cat-tier-bar" class="t2-cat-tier-bar"></div>
+        <div id="t2-cat-hint" class="t2-cat-hint"></div>
+        <div class="t2-modal-scroll">
+          <table class="t2-cat-table">
+            <thead>
+              <tr>
+                <th></th>
+                <th>Tier</th>
+                <th>Manufacturer</th>
+                <th>Model</th>
+                <th>Power (kW)</th>
+                <th>Energy (kWh)</th>
+                <th>Duration</th>
+                <th>RTE</th>
+                <th>$/kWh</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="t2-cat-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- JSON Preview Modal -->
+    <div id="t2-json-modal" style="display: none" class="t2-overlay">
+      <div class="t2-modal" style="max-width: 640px">
+        <div class="t2-modal-hdr">
+          <span class="t2-modal-title">Batch Payload Preview</span>
+          <button class="t2-close-btn" onclick="closeJsonPreview()">✕</button>
+        </div>
+        <pre id="t2-json-body" class="t2-json-body"></pre>
+      </div>
+    </div>
+
+    <script>
+      // Step 2 + 3 toggle (accordion mechanics on the step header)
+      let accordionOpenStep3 = false;
+      function t2_toggleAccordion() {
+        accordionOpenStep3 = !accordionOpenStep3;
+        document.getElementById('t2-accordion-body').classList.toggle('open', accordionOpenStep3);
+        document.getElementById('t2-accordion-chevron').classList.toggle('open', accordionOpenStep3);
+        document.getElementById('t2-accordion-btn').classList.toggle('is-open', accordionOpenStep3);
+        if (accordionOpenStep3) t2_openDirected();
+      }
+      function t2_scrollToStep3() {
+        if (!accordionOpenStep3) t2_toggleAccordion();
+        document.getElementById('step3').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      // Auto-open both Step 2 and Step 3 on load
+      window.addEventListener('DOMContentLoaded', () => {
+        if (!accordionOpenStep3) t2_toggleAccordion();
+      });
+    </script>
+
     <script src="app.js"></script>
+    <script src="take2.js"></script>
+    <script>
+      // After app.js runs and exposes its state, surface the anchor handoff card
+      // Augment Step 2 toggleAccordion to also sync `is-open` on the step-header
+      // (so the number circle fills in like Step 3 does)
+      const _origAccordion = window.toggleAccordion;
+      window.toggleAccordion = async function () {
+        if (_origAccordion) await _origAccordion();
+        const open = document.getElementById('accordion-body').classList.contains('open');
+        document.getElementById('accordion-btn').classList.toggle('is-open', open);
+      };
+      // Initial sync after app.js auto-opens
+      setTimeout(() => {
+        const open = document.getElementById('accordion-body').classList.contains('open');
+        document.getElementById('accordion-btn').classList.toggle('is-open', open);
+      }, 200);
+
+      function renderStripStats() {
+        const el = document.getElementById('strip-stats');
+        if (!el || typeof S === 'undefined' || !S.dailyStats) return;
+        const peaks = S.dailyStats.map((d) => d.peakKw);
+        const maxKw = Math.round(Math.max(...peaks));
+        const avgPeak = Math.round(peaks.reduce((a, b) => a + b, 0) / peaks.length);
+        const days = S.dailyStats.length;
+        el.innerHTML = `
+          <span class="strip-stat"><strong>${maxKw.toLocaleString()}</strong> kW max</span>
+          <span class="strip-stat"><strong>${avgPeak.toLocaleString()}</strong> kW avg peak</span>
+          <span class="strip-stat"><strong>${days}</strong> days analyzed</span>`;
+      }
+      // No-op kept for any legacy callers in app.js
+      function refreshAnchorHandoff() {
+        renderStripStats();
+      }
+      const _origCompute2 = window.compute;
+      window.compute = function () {
+        _origCompute2 && _origCompute2();
+        renderStripStats();
+      };
+      // Site context expand/collapse
+      let siteContextOpen = false;
+      function toggleSiteContext() {
+        siteContextOpen = !siteContextOpen;
+        document.getElementById('sc-body').style.display = siteContextOpen ? '' : 'none';
+        document.getElementById('sc-caret').textContent = siteContextOpen ? '▼' : '▶';
+        document.getElementById('sc-toggle').classList.toggle('is-open', siteContextOpen);
+        if (siteContextOpen && typeof S !== 'undefined' && S.loadRows && S.loadRows.length) {
+          setTimeout(() => renderHeatmap(S.loadRows), 50);
+        }
+      }
+      // Surface immediately if data already loaded
+      setTimeout(refreshAnchorHandoff, 500);
+    </script>
   </body>
 </html>

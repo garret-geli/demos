@@ -1,0 +1,48 @@
+{
+  "_note": "Battery product catalogue spanning residential to utility-scale. Values are publicly-known nameplate specs where available; cost / efficiency figures are reasonable industry midpoints, not vendor quotes. SOC limits, RTE and degradation are illustrative for sizing.",
+  "_units": {
+    "power_rating_kw": "kW AC nameplate",
+    "energy_capacity_kwh": "kWh useable",
+    "duration_hrs": "energy / power",
+    "roundtrip_efficiency": "AC-to-AC fraction",
+    "degradation_rate_annual": "capacity fade / yr, fraction",
+    "upfront_cost_per_kwh": "$ / kWh installed (USD)",
+    "ongoing_cost_annual": "$ / yr O&M (USD)"
+  },
+  "tiers": [
+    { "id": "residential", "label": "Residential", "range": "5 – 30 kWh" },
+    { "id": "light_commercial", "label": "Light Commercial", "range": "30 – 500 kWh" },
+    { "id": "commercial", "label": "Commercial & Industrial", "range": "500 kWh – 5 MWh" },
+    { "id": "utility", "label": "Utility-Scale", "range": "5 MWh and up" }
+  ],
+  "batteries": [
+    { "manufacturer": "Qcells",   "model": "Q.HOME Core H8",        "tier": "residential",       "power_rating_kw": 6,     "energy_capacity_kwh": 13.7,  "duration_hrs": 2.3, "roundtrip_efficiency": 0.93, "degradation_rate_annual": 0.020, "upfront_cost_per_kwh": 920, "ongoing_cost_annual": 200,  "min_soc": 0.05, "max_soc": 0.95 },
+    { "manufacturer": "Tesla",    "model": "Powerwall 3",           "tier": "residential",       "power_rating_kw": 11.5,  "energy_capacity_kwh": 13.5,  "duration_hrs": 1.2, "roundtrip_efficiency": 0.89, "degradation_rate_annual": 0.020, "upfront_cost_per_kwh": 850, "ongoing_cost_annual": 150,  "min_soc": 0.05, "max_soc": 0.95 },
+    { "manufacturer": "LG Energy","model": "RESU Prime 16H",        "tier": "residential",       "power_rating_kw": 7,     "energy_capacity_kwh": 16,    "duration_hrs": 2.3, "roundtrip_efficiency": 0.90, "degradation_rate_annual": 0.020, "upfront_cost_per_kwh": 880, "ongoing_cost_annual": 180,  "min_soc": 0.05, "max_soc": 0.95 },
+    { "manufacturer": "Enphase",  "model": "IQ Battery 10",         "tier": "residential",       "power_rating_kw": 3.84,  "energy_capacity_kwh": 10.08, "duration_hrs": 2.6, "roundtrip_efficiency": 0.89, "degradation_rate_annual": 0.025, "upfront_cost_per_kwh": 940, "ongoing_cost_annual": 160,  "min_soc": 0.05, "max_soc": 0.95 },
+    { "manufacturer": "Generac",  "model": "PWRcell M6",            "tier": "residential",       "power_rating_kw": 9,     "energy_capacity_kwh": 18,    "duration_hrs": 2.0, "roundtrip_efficiency": 0.88, "degradation_rate_annual": 0.025, "upfront_cost_per_kwh": 760, "ongoing_cost_annual": 220,  "min_soc": 0.10, "max_soc": 0.95 },
+    { "manufacturer": "Sonnen",   "model": "ecoLinx 30",            "tier": "residential",       "power_rating_kw": 8,     "energy_capacity_kwh": 30,    "duration_hrs": 3.75,"roundtrip_efficiency": 0.91, "degradation_rate_annual": 0.018, "upfront_cost_per_kwh": 1100,"ongoing_cost_annual": 300,  "min_soc": 0.05, "max_soc": 0.95 },
+    { "manufacturer": "Franklin", "model": "aPower 2",              "tier": "residential",       "power_rating_kw": 10,    "energy_capacity_kwh": 15,    "duration_hrs": 1.5, "roundtrip_efficiency": 0.89, "degradation_rate_annual": 0.020, "upfront_cost_per_kwh": 820, "ongoing_cost_annual": 180,  "min_soc": 0.05, "max_soc": 0.95 },
+
+    { "manufacturer": "Tesla",    "model": "Powerpack 2 (legacy)",  "tier": "light_commercial",  "power_rating_kw": 50,    "energy_capacity_kwh": 200,   "duration_hrs": 4.0, "roundtrip_efficiency": 0.88, "degradation_rate_annual": 0.025, "upfront_cost_per_kwh": 540, "ongoing_cost_annual": 4000, "min_soc": 0.05, "max_soc": 0.95 },
+    { "manufacturer": "BYD",      "model": "Battery-Box Commercial","tier": "light_commercial",  "power_rating_kw": 100,   "energy_capacity_kwh": 256,   "duration_hrs": 2.6, "roundtrip_efficiency": 0.89, "degradation_rate_annual": 0.025, "upfront_cost_per_kwh": 460, "ongoing_cost_annual": 4800, "min_soc": 0.05, "max_soc": 0.95 },
+    { "manufacturer": "SimpliPhi","model": "PHI ESS",               "tier": "light_commercial",  "power_rating_kw": 60,    "energy_capacity_kwh": 230,   "duration_hrs": 3.8, "roundtrip_efficiency": 0.90, "degradation_rate_annual": 0.020, "upfront_cost_per_kwh": 580, "ongoing_cost_annual": 4500, "min_soc": 0.10, "max_soc": 0.95 },
+    { "manufacturer": "Generac",  "model": "PWRcommercial",         "tier": "light_commercial",  "power_rating_kw": 100,   "energy_capacity_kwh": 400,   "duration_hrs": 4.0, "roundtrip_efficiency": 0.87, "degradation_rate_annual": 0.028, "upfront_cost_per_kwh": 420, "ongoing_cost_annual": 7000, "min_soc": 0.05, "max_soc": 0.95 },
+
+    { "manufacturer": "Sungrow",  "model": "ST500CP-50HV",          "tier": "commercial",        "power_rating_kw": 500,   "energy_capacity_kwh": 1000,  "duration_hrs": 2.0, "roundtrip_efficiency": 0.88, "degradation_rate_annual": 0.028, "upfront_cost_per_kwh": 320, "ongoing_cost_annual": 12000,"min_soc": 0.10, "max_soc": 0.90 },
+    { "manufacturer": "Tesla",    "model": "Megapack",              "tier": "commercial",        "power_rating_kw": 1000,  "energy_capacity_kwh": 4000,  "duration_hrs": 4.0, "roundtrip_efficiency": 0.90, "degradation_rate_annual": 0.022, "upfront_cost_per_kwh": 295, "ongoing_cost_annual": 22000,"min_soc": 0.05, "max_soc": 0.95 },
+    { "manufacturer": "Fluence",  "model": "Gridstack 4h",          "tier": "commercial",        "power_rating_kw": 1000,  "energy_capacity_kwh": 4000,  "duration_hrs": 4.0, "roundtrip_efficiency": 0.89, "degradation_rate_annual": 0.022, "upfront_cost_per_kwh": 272, "ongoing_cost_annual": 21000,"min_soc": 0.05, "max_soc": 0.95 },
+    { "manufacturer": "CATL",     "model": "EnerC 4h",              "tier": "commercial",        "power_rating_kw": 1250,  "energy_capacity_kwh": 5000,  "duration_hrs": 4.0, "roundtrip_efficiency": 0.91, "degradation_rate_annual": 0.018, "upfront_cost_per_kwh": 246, "ongoing_cost_annual": 18000,"min_soc": 0.05, "max_soc": 0.95 },
+    { "manufacturer": "BYD",      "model": "MC Cube 1500",          "tier": "commercial",        "power_rating_kw": 1500,  "energy_capacity_kwh": 5500,  "duration_hrs": 3.7, "roundtrip_efficiency": 0.88, "degradation_rate_annual": 0.025, "upfront_cost_per_kwh": 252, "ongoing_cost_annual": 20000,"min_soc": 0.05, "max_soc": 0.95 },
+
+    { "manufacturer": "Tesla",    "model": "Megapack 2",            "tier": "utility",           "power_rating_kw": 1500,  "energy_capacity_kwh": 7500,  "duration_hrs": 5.0, "roundtrip_efficiency": 0.91, "degradation_rate_annual": 0.020, "upfront_cost_per_kwh": 285, "ongoing_cost_annual": 32000,"min_soc": 0.05, "max_soc": 0.95 },
+    { "manufacturer": "Tesla",    "model": "Megapack 2XL",          "tier": "utility",           "power_rating_kw": 2000,  "energy_capacity_kwh": 10000, "duration_hrs": 5.0, "roundtrip_efficiency": 0.92, "degradation_rate_annual": 0.020, "upfront_cost_per_kwh": 280, "ongoing_cost_annual": 40000,"min_soc": 0.05, "max_soc": 0.95 },
+    { "manufacturer": "Fluence",  "model": "Gridstack Pro 5h",      "tier": "utility",           "power_rating_kw": 2000,  "energy_capacity_kwh": 10000, "duration_hrs": 5.0, "roundtrip_efficiency": 0.89, "degradation_rate_annual": 0.020, "upfront_cost_per_kwh": 265, "ongoing_cost_annual": 36000,"min_soc": 0.05, "max_soc": 0.95 },
+    { "manufacturer": "CATL",     "model": "EnerC 5h",              "tier": "utility",           "power_rating_kw": 2500,  "energy_capacity_kwh": 12500, "duration_hrs": 5.0, "roundtrip_efficiency": 0.91, "degradation_rate_annual": 0.018, "upfront_cost_per_kwh": 242, "ongoing_cost_annual": 30000,"min_soc": 0.05, "max_soc": 0.95 },
+    { "manufacturer": "BYD",      "model": "MC Cube T28",           "tier": "utility",           "power_rating_kw": 3000,  "energy_capacity_kwh": 11200, "duration_hrs": 3.7, "roundtrip_efficiency": 0.88, "degradation_rate_annual": 0.025, "upfront_cost_per_kwh": 248, "ongoing_cost_annual": 35000,"min_soc": 0.05, "max_soc": 0.95 },
+    { "manufacturer": "Sungrow",  "model": "ST2752UX-US",           "tier": "utility",           "power_rating_kw": 3440,  "energy_capacity_kwh": 11000, "duration_hrs": 3.2, "roundtrip_efficiency": 0.90, "degradation_rate_annual": 0.025, "upfront_cost_per_kwh": 255, "ongoing_cost_annual": 38000,"min_soc": 0.05, "max_soc": 0.95 },
+    { "manufacturer": "Wartsila", "model": "GridSolv Quantum 4h",   "tier": "utility",           "power_rating_kw": 5000,  "energy_capacity_kwh": 20000, "duration_hrs": 4.0, "roundtrip_efficiency": 0.88, "degradation_rate_annual": 0.022, "upfront_cost_per_kwh": 252, "ongoing_cost_annual": 55000,"min_soc": 0.05, "max_soc": 0.95 },
+    { "manufacturer": "Powin",    "model": "Stack100-4h",           "tier": "utility",           "power_rating_kw": 7500,  "energy_capacity_kwh": 30000, "duration_hrs": 4.0, "roundtrip_efficiency": 0.87, "degradation_rate_annual": 0.028, "upfront_cost_per_kwh": 241, "ongoing_cost_annual": 65000,"min_soc": 0.05, "max_soc": 0.95 },
+    { "manufacturer": "Powin",    "model": "Stack100-5h",           "tier": "utility",           "power_rating_kw": 10000, "energy_capacity_kwh": 50000, "duration_hrs": 5.0, "roundtrip_efficiency": 0.87, "degradation_rate_annual": 0.028, "upfront_cost_per_kwh": 238, "ongoing_cost_annual": 85000,"min_soc": 0.05, "max_soc": 0.95 }
+  ]
+}
