@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Storage Sizing — Stage 1 Heuristics</title>
+    <link rel="icon" type="image/png" href="assets/q_favicon.png" />
     <link rel="stylesheet" href="styles.css" />
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
@@ -11,11 +12,11 @@
   </head>
   <body>
     <!-- Auth overlay disabled for demo (handled by auth.js stub) -->
-    <div id="auth-overlay" style="display:none">
+    <div id="auth-overlay" style="display: none">
       <div class="auth-card">
-        <div class="auth-logo"></div>
+        <img class="auth-logo" src="assets/qcells-logo-gradient.png" alt="Qcells" />
         <h2 class="auth-title">Sign in to continue</h2>
-        <p class="auth-subtitle">Storage Sizing &mdash; Stage 1 Heuristics</p>
+        <p class="auth-subtitle">Storage Sizing</p>
         <div id="auth-error" class="auth-error"></div>
         <form id="auth-form" autocomplete="on" novalidate>
           <div class="auth-field"><label for="auth-userid">User ID</label><input type="text" id="auth-userid" autocomplete="username" required /></div>
@@ -26,8 +27,8 @@
     </div>
 
     <header>
-      <div class="logo"></div>
-      <h1>Storage Sizing — Stage 1 Heuristics</h1>
+      <img class="logo" src="assets/qcells-logo-gradient.png" alt="Qcells" />
+      <h1>Storage Sizing</h1>
       <small>Demo · May 2026</small>
       <button class="signout-btn" onclick="logout()">Sign out</button>
     </header>
@@ -36,7 +37,6 @@
          STEP RAIL — one connected vertical flow
     ═════════════════════════════════════════════════════════ -->
     <div class="flow">
-
       <!-- ── STEP 1 · SITE PROFILE ─────────────────────────── -->
       <section class="flow-step" id="step1">
         <header class="step-header">
@@ -76,7 +76,10 @@
                 <div class="field"><label for="r-onpkd">On-Peak Demand ($/kW)</label><input type="number" id="r-onpkd" value="16.00" min="0" step="0.5" /></div>
                 <div class="field"><label for="r-onpke">On-Peak Energy ($/kWh)</label><input type="number" id="r-onpke" value="0.380" min="0" step="0.01" /></div>
                 <div class="field"><label for="r-offpke">Off-Peak Energy ($/kWh)</label><input type="number" id="r-offpke" value="0.160" min="0" step="0.01" /></div>
-                <div class="field" style="grid-column: 1/-1"><label for="r-soffpke">Super Off-Peak Energy ($/kWh) <span style="color: var(--gray-400)">(optional)</span></label><input type="number" id="r-soffpke" value="0.080" min="0" step="0.01" /></div>
+                <div class="field" style="grid-column: 1/-1">
+                  <label for="r-soffpke">Super Off-Peak Energy ($/kWh) <span style="color: var(--gray-400)">(optional)</span></label
+                  ><input type="number" id="r-soffpke" value="0.080" min="0" step="0.01" />
+                </div>
               </div>
             </div>
           </div>
@@ -96,91 +99,15 @@
               <div class="card-head"><div class="card-title">Solar (PV)</div></div>
               <div class="toggle-row"><input type="checkbox" id="solar-toggle" /><label for="solar-toggle">Include Solar</label></div>
               <div id="solar-size-field" style="display: none">
-                <div class="field"><label for="solar-kw">System size (kWdc) — scales 1,000 kW reference profile linearly</label><input type="number" id="solar-kw" value="500" min="1" max="10000" /></div>
+                <div class="field">
+                  <label for="solar-kw">System size (kWdc) — scales 1,000 kW reference profile linearly</label><input type="number" id="solar-kw" value="500" min="1" max="10000" />
+                </div>
               </div>
               <div style="font-size: 12px; color: var(--gray-400); margin-top: 4px">When enabled, outputs reflect net load (load minus generation).</div>
             </div>
           </div>
-        </div>
-      </section>
 
-      <!-- ── STEP 2 · PICK A BATTERY SIZE ─────────────────── -->
-      <section class="flow-step" id="step2">
-        <header class="step-header is-toggle is-open" onclick="toggleAccordion()" id="accordion-btn">
-          <div class="step-num">2</div>
-          <div class="step-meta">
-            <div class="step-eyebrow">Step 2 · Heuristic sizing</div>
-            <h2 class="step-title">Pick a Battery Size</h2>
-            <p class="step-sub">A starting size from your load &amp; tariff — the single-config sim Predict has always run. Step 3 then varies around it.</p>
-          </div>
-          <div class="step-chevron open" id="accordion-chevron">▼</div>
-        </header>
-
-        <div class="step-body accordion-body open" id="accordion-body">
-          <div id="accordion-loading" class="loading">Loading data…</div>
-
-          <!-- Compact strip: coverage slider + load summary -->
-          <div class="sizing-strip" id="section-coverage" style="display: none">
-            <div class="strip-coverage">
-              <label for="cov-range" class="strip-label">Coverage</label>
-              <input type="range" id="cov-range" min="50" max="95" step="5" value="80" />
-              <span class="cov-val" id="cov-display">80%</span>
-              <span class="strip-hint">50% economical · 95% worst days</span>
-            </div>
-            <div class="strip-divider"></div>
-            <div class="strip-stats" id="strip-stats"></div>
-          </div>
-
-          <!-- The answer: two sizing recommendations -->
-          <div class="sizing-row" id="section-sizing" style="display: none">
-            <div class="card sz-accent-dcm" id="card-dcm">
-              <div class="card-head">
-                <span class="sz-badge sz-badge-dcm">Demand Charge Management</span>
-                <div class="info-wrap" style="margin-left: auto">
-                  <span class="info-icon">i</span>
-                  <div class="info-tip">
-                    <strong>DCM sizing logic</strong>
-                    <ul style="margin-top: 6px">
-                      <li><strong>Target Power:</strong> Nth-percentile of daily peak load values.</li>
-                      <li><strong>Target Energy:</strong> Target power × on-peak window length.</li>
-                      <li><strong>Viable when</strong> on-peak demand charge ≥ $8/kW.</li>
-                      <li>N is set by the Coverage slider above.</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-              <div id="dcm-content"></div>
-            </div>
-            <div class="card sz-accent-arb" id="card-arb">
-              <div class="card-head">
-                <span class="sz-badge sz-badge-arb">TOU Arbitrage</span>
-                <div class="info-wrap" style="margin-left: auto">
-                  <span class="info-icon">i</span>
-                  <div class="info-tip">
-                    <strong>TOU Arbitrage sizing logic</strong>
-                    <ul style="margin-top: 6px">
-                      <li><strong>Target Energy:</strong> Nth-percentile of daily on-peak consumption.</li>
-                      <li><strong>Target Power:</strong> Target energy ÷ on-peak window length.</li>
-                      <li><strong>Viable when</strong> on-peak minus off-peak energy spread ≥ $0.08/kWh.</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-              <div id="arb-content"></div>
-            </div>
-          </div>
-
-          <!-- Starting-size handoff — bridges to Step 3 -->
-          <div class="anchor-handoff" id="anchor-handoff" style="display:none">
-            <div class="ah-icon">→</div>
-            <div class="ah-text">
-              <div class="ah-title">Starting size selected</div>
-              <div class="ah-sub" id="ah-sub">Step 3 will sweep around this size.</div>
-            </div>
-            <button class="t2-btn-primary" onclick="t2_scrollToStep3()">Continue to Step 3 ↓</button>
-          </div>
-
-          <!-- Site context disclosure — collapsed by default -->
+          <!-- Site context disclosure — load heatmap + monthly profile -->
           <div class="site-context" id="section-load" style="display: none">
             <button class="sc-toggle" id="sc-toggle" onclick="toggleSiteContext()">
               <span class="sc-caret" id="sc-caret">▶</span>
@@ -188,7 +115,7 @@
               <span class="sc-toggle-sub">load heatmap, monthly profile, TOU overlay</span>
             </button>
 
-            <div class="sc-body" id="sc-body" style="display:none">
+            <div class="sc-body" id="sc-body" style="display: none">
               <div class="card">
                 <div class="card-head">
                   <div class="card-title" id="heatmap-title">Load Heatmap — Date × Hour of Day</div>
@@ -207,9 +134,12 @@
                     <button id="hm-onpeak-btn" class="hm-case-btn active" style="font-size: 10px; padding: 3px 8px">On-Peak Overlay</button>
                     <label for="hm-scheme" style="font-size: 11px; color: var(--gray-400)">Colors:</label>
                     <select id="hm-scheme" style="font-size: 11px; padding: 2px 4px; border: 1px solid var(--gray-200); border-radius: 4px">
-                      <option value="plasma">Plasma</option><option value="viridis">Viridis</option>
-                      <option value="hot">Hot</option><option value="reds">Reds</option>
-                      <option value="blues">Blues</option><option value="greens">Greens</option>
+                      <option value="plasma">Plasma</option>
+                      <option value="viridis">Viridis</option>
+                      <option value="hot">Hot</option>
+                      <option value="reds">Reds</option>
+                      <option value="blues">Blues</option>
+                      <option value="greens">Greens</option>
                     </select>
                   </div>
                 </div>
@@ -234,15 +164,73 @@
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      <!-- ── STEP 2 · PICK A BATTERY SIZE ─────────────────── -->
+      <section class="flow-step" id="step2">
+        <header class="step-header" id="accordion-btn">
+          <div class="step-num">2</div>
+          <div class="step-meta">
+            <div class="step-eyebrow">Step 2 · Heuristic sizing</div>
+            <h2 class="step-title">Pick a Battery Size</h2>
+            <p class="step-sub">A starting size from your load &amp; tariff — the single-config sim Predict has always run. Step 3 then varies around it.</p>
+          </div>
+          <div class="step-chevron open" id="accordion-chevron">▼</div>
+        </header>
+
+        <div class="step-body accordion-body open" id="accordion-body">
+          <div id="accordion-loading" class="loading">Loading data…</div>
+
+          <!-- Compact strip: coverage slider + load summary -->
+          <div class="sizing-strip" id="section-coverage" style="display: none">
+            <div class="strip-coverage">
+              <label for="cov-range" class="strip-label">Coverage</label>
+              <input type="range" id="cov-range" min="50" max="95" step="5" value="80" />
+              <span class="cov-val" id="cov-display">80%</span>
+              <span class="strip-hint">50% economical · 95% worst days</span>
+            </div>
+            <div class="strip-divider"></div>
+            <div class="strip-stats" id="strip-stats"></div>
+          </div>
+
+          <!-- The answer: ONE recommended size -->
+          <div class="sizing-rec" id="section-sizing" style="display: none">
+            <div class="card sz-rec-card sz-accent-dcm" id="card-rec">
+              <div class="card-head">
+                <span class="sz-badge sz-badge-rec">Recommended size</span>
+                <span id="rec-strategy" class="sz-strategy-slot"></span>
+                <div class="info-wrap" style="margin-left: auto">
+                  <span class="info-icon">i</span>
+                  <div class="info-tip">
+                    <strong>How this size is chosen</strong>
+                    <ul style="margin-top: 6px">
+                      <li>
+                        If on-peak demand charge ≥ $8/kW → size for <strong>demand-charge management</strong> (peak shaving): power at the Nth percentile of daily peaks, energy = power × battery
+                        duration.
+                      </li>
+                      <li>
+                        Otherwise, if on/off-peak energy spread ≥ $0.08/kWh → size for <strong>TOU arbitrage</strong>: energy at the Nth percentile of daily on-peak consumption, power = energy ÷
+                        battery duration.
+                      </li>
+                      <li>Battery duration is capped at <strong>4 hours</strong> — the dominant commercial Li-ion offering.</li>
+                      <li>N is set by the Coverage slider above.</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              <div id="rec-content"></div>
+            </div>
+          </div>
 
           <!-- Hidden mount point for load-stats kept for app.js render call -->
-          <div id="load-stats" style="display:none"></div>
+          <div id="load-stats" style="display: none"></div>
         </div>
       </section>
 
       <!-- ── STEP 3 · BUILD A BATCH ────────────────────────── -->
       <section class="flow-step" id="step3">
-        <header class="step-header is-toggle" onclick="t2_toggleAccordion()" id="t2-accordion-btn">
+        <header class="step-header" id="t2-accordion-btn">
           <div class="step-num">3</div>
           <div class="step-meta">
             <div class="step-eyebrow">Step 3 · Batch simulation</div>
@@ -253,7 +241,6 @@
         </header>
 
         <div class="step-body accordion-body" id="t2-accordion-body">
-
           <!-- Mode selector -->
           <div class="t2-mode-bar">
             <button class="t2-mode-btn active" data-mode="directed" onclick="t2_openDirected()">
@@ -280,9 +267,7 @@
                 <button class="t2-btn-primary" id="t2-dir-run-btn" onclick="t2_runDirected()" disabled>▶ Run Batch</button>
               </div>
             </div>
-            <div id="t2-dir-empty" class="t2-empty-state">
-              No configurations yet — click <strong>Suggest from anchor</strong>, or <strong>+ Add config</strong> to start blank.
-            </div>
+            <div id="t2-dir-empty" class="t2-empty-state">No configurations yet — click <strong>Suggest from anchor</strong>, or <strong>+ Add config</strong> to start blank.</div>
             <div id="t2-dir-stack" class="t2-cfg-stack"></div>
           </div>
 
@@ -315,7 +300,6 @@
               <div id="t2-comp-table-wrap" class="t2-comp-wrap"></div>
             </div>
           </div>
-
         </div>
       </section>
     </div>
@@ -337,9 +321,16 @@
           <table class="t2-cat-table">
             <thead>
               <tr>
-                <th></th><th>Tier</th><th>Manufacturer</th><th>Model</th>
-                <th>Power (kW)</th><th>Energy (kWh)</th><th>Duration</th>
-                <th>RTE</th><th>$/kWh</th><th></th>
+                <th></th>
+                <th>Tier</th>
+                <th>Manufacturer</th>
+                <th>Model</th>
+                <th>Power (kW)</th>
+                <th>Energy (kWh)</th>
+                <th>Duration</th>
+                <th>RTE</th>
+                <th>$/kWh</th>
+                <th></th>
               </tr>
             </thead>
             <tbody id="t2-cat-tbody"></tbody>
@@ -350,7 +341,7 @@
 
     <!-- JSON Preview Modal -->
     <div id="t2-json-modal" style="display: none" class="t2-overlay">
-      <div class="t2-modal" style="max-width:640px">
+      <div class="t2-modal" style="max-width: 640px">
         <div class="t2-modal-hdr">
           <span class="t2-modal-title">Batch Payload Preview</span>
           <button class="t2-close-btn" onclick="closeJsonPreview()">✕</button>
@@ -397,35 +388,26 @@
         document.getElementById('accordion-btn').classList.toggle('is-open', open);
       }, 200);
 
-      function refreshAnchorHandoff() {
-        const handoff = document.getElementById('anchor-handoff');
-        if (!handoff) return;
-        if (typeof S !== 'undefined' && S.dailyStats) {
-          const a = getHeuristicAnchor();
-          document.getElementById('ah-sub').textContent =
-            `Starting size: ${(a.powerKw/1000).toFixed(1)} MW / ${(a.energyKwh/1000).toFixed(1)} MWh — Step 3 will sweep ±2 sizes around this.`;
-          handoff.style.display = '';
-          renderStripStats();
-        } else {
-          handoff.style.display = 'none';
-        }
-      }
       function renderStripStats() {
         const el = document.getElementById('strip-stats');
         if (!el || typeof S === 'undefined' || !S.dailyStats) return;
-        const peaks = S.dailyStats.map(d => d.peakKw);
+        const peaks = S.dailyStats.map((d) => d.peakKw);
         const maxKw = Math.round(Math.max(...peaks));
-        const avgPeak = Math.round(peaks.reduce((a,b)=>a+b,0)/peaks.length);
+        const avgPeak = Math.round(peaks.reduce((a, b) => a + b, 0) / peaks.length);
         const days = S.dailyStats.length;
         el.innerHTML = `
           <span class="strip-stat"><strong>${maxKw.toLocaleString()}</strong> kW max</span>
           <span class="strip-stat"><strong>${avgPeak.toLocaleString()}</strong> kW avg peak</span>
           <span class="strip-stat"><strong>${days}</strong> days analyzed</span>`;
       }
+      // No-op kept for any legacy callers in app.js
+      function refreshAnchorHandoff() {
+        renderStripStats();
+      }
       const _origCompute2 = window.compute;
       window.compute = function () {
         _origCompute2 && _origCompute2();
-        refreshAnchorHandoff();
+        renderStripStats();
       };
       // Site context expand/collapse
       let siteContextOpen = false;

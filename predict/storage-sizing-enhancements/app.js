@@ -42,6 +42,9 @@ const S = {
   covPctile: 80,
   monthlyChart: null,
   dailyStats: null,
+  dcmSelectedKey: null,  // (legacy) selected catalogue battery for DCM
+  arbSelectedKey: null,  // (legacy) selected catalogue battery for ARB
+  recSelectedKey: null,  // selected catalogue battery for the single recommendation
   heatmapGrid: null,
   heatmapMaxKw: 0,
   hmCase: 'baseline', // 'baseline' | 'post-solar'
@@ -233,14 +236,18 @@ function computeSizing(dailyStats, rates, covPctile, tariff) {
   const peaks = dailyStats.map((d) => d.peakKw);
   const onPeakKwhs = dailyStats.filter((d) => d.onPeakPts > 0).map((d) => d.onPeakKwh);
   const opHrs = tariff.onPeakHrs;
+  // Cap battery duration at 4h — most commercial Li-ion offerings cluster at 2h or 4h.
+  // Sizing the energy at full on-peak window (e.g. 5h) recommends a battery duration
+  // that doesn't exist in the market.
+  const batteryDurHrs = Math.min(opHrs, 4);
 
   // DCM
   const dcmPeakKw = pctile(peaks, covPctile);
-  const dcmEnergyKwh = dcmPeakKw * opHrs;
+  const dcmEnergyKwh = dcmPeakKw * batteryDurHrs;
 
   // TOU Arb
   const arbEnergyKwh = onPeakKwhs.length ? pctile(onPeakKwhs, covPctile) : 0;
-  const arbPowerKw = opHrs > 0 ? arbEnergyKwh / opHrs : 0;
+  const arbPowerKw = batteryDurHrs > 0 ? arbEnergyKwh / batteryDurHrs : 0;
 
   const spread = rates.onPeakEnergy - Math.min(rates.offPeakEnergy, rates.superOffPeakEnergy || rates.offPeakEnergy);
 
@@ -289,6 +296,25 @@ function plasmaRGB(t) {
     i = Math.min(Math.floor(sv), s.length - 2),
     f = sv - i;
   return s[i].map((a, j) => Math.round(a + (s[i + 1][j] - a) * f));
+}
+
+// ── Format helpers (app-local, defined before take2.js) ──────
+function _fmtKw(kw)  { return kw >= 1000 ? `${+(kw / 1000).toFixed(1)} MW`  : `${Math.round(kw)} kW`;  }
+function _fmtKwh(kwh){ return kwh >= 1000 ? `${+(kwh / 1000).toFixed(1)} MWh` : `${Math.round(kwh)} kWh`; }
+function _esc(s)     { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ── Find nearest catalogue batteries ─────────────────────────
+function catalogueMatchesForSize(targetKw, targetKwh, count) {
+  count = count || 4;
+  if (typeof BATTERY_CATALOGUE === 'undefined') return [];
+  return [...BATTERY_CATALOGUE]
+    .map(b => ({
+      ...b,
+      _score: Math.abs(Math.log(Math.max(b.power_rating_kw, 0.1) / Math.max(targetKw, 0.1)))
+            + Math.abs(Math.log(Math.max(b.energy_capacity_kwh, 0.1) / Math.max(targetKwh, 0.1))),
+    }))
+    .sort((a, b) => a._score - b._score)
+    .slice(0, count);
 }
 
 // ── Render: tariff tiles ──────────────────────────────────
@@ -348,58 +374,235 @@ function renderLoadStats(sizing, solarOn) {
 // ── Render: DCM card ──────────────────────────────────────
 function renderDCM(dcm, rates) {
   const el = document.getElementById('dcm-content');
+  const card = document.getElementById('card-dcm');
   if (!dcm.viable) {
     el.innerHTML = `<div class="sz-na">On-peak demand charge ($${rates.onPeakDemand}/kW) is below the $${H.DCM_THRESHOLD}/kW viability threshold. DCM is unlikely to justify storage costs at this site.</div>`;
-    document.getElementById('card-dcm').style.opacity = '0.55';
+    card.style.opacity = '0.55';
     return;
   }
-  document.getElementById('card-dcm').style.opacity = '1';
-  el.innerHTML = `
-    <div class="sz-main">
-      <div class="sz-stat">
-        <div class="sz-label">Target Power</div>
-        <div class="sz-value">${dcm.powerKw.toLocaleString()} kW</div>
-        <div class="sz-range">Range: ${dcm.minPower}–${dcm.maxPower} kW</div>
+  card.style.opacity = '1';
+
+  const matches = catalogueMatchesForSize(dcm.powerKw, dcm.energyKwh, 4);
+  if (typeof BATTERY_CATALOGUE !== 'undefined') {
+    const validKey = S.dcmSelectedKey && BATTERY_CATALOGUE.find(b => (b.manufacturer + ' ' + b.model) === S.dcmSelectedKey);
+    if (!validKey && matches.length) S.dcmSelectedKey = matches[0].manufacturer + ' ' + matches[0].model;
+  }
+
+  const covPct = document.getElementById('cov-display').textContent;
+  const durHrs = dcm.powerKw > 0 ? (dcm.energyKwh / dcm.powerKw).toFixed(1) : '—';
+  const peaksLine = dcm.top3Peaks.map((p, i) => `#${i + 1}: ${p.toLocaleString()} kW`).join(' · ');
+
+  const matchRows = matches.map(b => {
+    const key = b.manufacturer + ' ' + b.model;
+    const sel = S.dcmSelectedKey === key;
+    const tierLbl = typeof BATTERY_TIERS !== 'undefined'
+      ? (BATTERY_TIERS.find(t => t.id === b.tier)?.label || b.tier) : b.tier;
+    return `<div class="sz-match-row${sel ? ' selected' : ''}" onclick="selectDcmBattery(this.dataset.key)" data-key="${_esc(key)}">
+      <div class="sz-match-radio"><div class="sz-radio-dot${sel ? ' on' : ''}"></div></div>
+      <div class="sz-match-body">
+        <div class="sz-match-name">${_esc(b.manufacturer)} <span class="sz-match-model">${_esc(b.model)}</span></div>
+        <div class="sz-match-specs">${_fmtKw(b.power_rating_kw)} · ${_fmtKwh(b.energy_capacity_kwh)} · ${b.duration_hrs}h · <span class="sz-match-tier">${_esc(tierLbl)}</span></div>
       </div>
-      <div class="sz-stat">
-        <div class="sz-label">Target Energy</div>
-        <div class="sz-value">${dcm.energyKwh.toLocaleString()} kWh</div>
-        <div class="sz-range">Range: ${dcm.minEnergy}–${dcm.maxEnergy} kWh</div>
-      </div>
-    </div>
-    <div class="sz-context">
-      <strong>3 highest daily peaks:</strong>
-      ${dcm.top3Peaks.map((p, i) => ` #${i + 1}: ${p.toLocaleString()} kW`).join('·')}
-      &nbsp;—&nbsp;sizing to cover the <strong>${document.getElementById('cov-display').textContent}</strong> of days.
+      <div class="sz-match-price">$${b.upfront_cost_per_kwh}/kWh</div>
     </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="sz-hero">
+      <div class="sz-hero-num">${_fmtKw(dcm.powerKw)}<span class="sz-hero-sep"> / </span>${_fmtKwh(dcm.energyKwh)}</div>
+      <div class="sz-hero-sub">${durHrs}h duration · covers ${covPct} of days</div>
+    </div>
+    ${matches.length ? `
+      <div class="sz-divider"></div>
+      <div class="sz-match-hdr">Nearest catalogue fits</div>
+      <div class="sz-match-list">${matchRows}</div>
+    ` : ''}
+    <div class="sz-peaks-line">Top peaks: ${peaksLine}</div>
+  `;
+}
+
+// ── Select handlers ───────────────────────────────────────
+function selectDcmBattery(key) {
+  if (!S.dailyStats) return;
+  S.dcmSelectedKey = key;
+  const tariff = TARIFFS[S.tariffKey];
+  const sizing = computeSizing(S.dailyStats, S.rates, S.covPctile, tariff);
+  renderDCM(sizing.dcm, S.rates);
+  if (typeof refreshAnchorHandoff === 'function') refreshAnchorHandoff();
+}
+
+function selectArbBattery(key) {
+  if (!S.dailyStats) return;
+  S.arbSelectedKey = key;
+  const tariff = TARIFFS[S.tariffKey];
+  const sizing = computeSizing(S.dailyStats, S.rates, S.covPctile, tariff);
+  renderArb(sizing.arb, S.rates);
+  if (typeof refreshAnchorHandoff === 'function') refreshAnchorHandoff();
 }
 
 // ── Render: Arb card ──────────────────────────────────────
 function renderArb(arb, rates) {
   const el = document.getElementById('arb-content');
+  const card = document.getElementById('card-arb');
   if (!arb.viable) {
     el.innerHTML = `<div class="sz-na">Arbitrage spread ($${arb.spread}/kWh) is below the $${H.ARB_THRESHOLD}/kWh round-trip threshold. TOU arbitrage is unlikely to be profitable at current rates.</div>`;
-    document.getElementById('card-arb').style.opacity = '0.55';
+    card.style.opacity = '0.55';
     return;
   }
-  document.getElementById('card-arb').style.opacity = '1';
-  el.innerHTML = `
-    <div class="sz-main">
-      <div class="sz-stat">
-        <div class="sz-label">Target Power</div>
-        <div class="sz-value">${arb.powerKw.toLocaleString()} kW</div>
-        <div class="sz-range">Range: ${arb.minPower}–${arb.maxPower} kW</div>
+  if (!arb.powerKw || !arb.energyKwh) {
+    el.innerHTML = `<div class="sz-na">No on-peak consumption detected in the load data.</div>`;
+    card.style.opacity = '0.55';
+    return;
+  }
+  card.style.opacity = '1';
+
+  const matches = catalogueMatchesForSize(arb.powerKw, arb.energyKwh, 4);
+  if (typeof BATTERY_CATALOGUE !== 'undefined') {
+    const validKey = S.arbSelectedKey && BATTERY_CATALOGUE.find(b => (b.manufacturer + ' ' + b.model) === S.arbSelectedKey);
+    if (!validKey && matches.length) S.arbSelectedKey = matches[0].manufacturer + ' ' + matches[0].model;
+  }
+
+  const covPct = document.getElementById('cov-display').textContent;
+  const durHrs = arb.powerKw > 0 ? (arb.energyKwh / arb.powerKw).toFixed(1) : '—';
+
+  const matchRows = matches.map(b => {
+    const key = b.manufacturer + ' ' + b.model;
+    const sel = S.arbSelectedKey === key;
+    const tierLbl = typeof BATTERY_TIERS !== 'undefined'
+      ? (BATTERY_TIERS.find(t => t.id === b.tier)?.label || b.tier) : b.tier;
+    return `<div class="sz-match-row${sel ? ' selected' : ''}" onclick="selectArbBattery(this.dataset.key)" data-key="${_esc(key)}">
+      <div class="sz-match-radio"><div class="sz-radio-dot${sel ? ' on' : ''}"></div></div>
+      <div class="sz-match-body">
+        <div class="sz-match-name">${_esc(b.manufacturer)} <span class="sz-match-model">${_esc(b.model)}</span></div>
+        <div class="sz-match-specs">${_fmtKw(b.power_rating_kw)} · ${_fmtKwh(b.energy_capacity_kwh)} · ${b.duration_hrs}h · <span class="sz-match-tier">${_esc(tierLbl)}</span></div>
       </div>
-      <div class="sz-stat">
-        <div class="sz-label">Target Energy</div>
-        <div class="sz-value">${arb.energyKwh.toLocaleString()} kWh</div>
-        <div class="sz-range">Range: ${arb.minEnergy}–${arb.maxEnergy} kWh</div>
-      </div>
-    </div>
-    <div class="sz-context">
-      Spread of <strong>$${arb.spread}/kWh</strong> over round-trip losses.
-      Sized to offset on-peak consumption on <strong>${document.getElementById('cov-display').textContent}</strong> of days.
+      <div class="sz-match-price">$${b.upfront_cost_per_kwh}/kWh</div>
     </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="sz-hero">
+      <div class="sz-hero-num">${_fmtKw(arb.powerKw)}<span class="sz-hero-sep"> / </span>${_fmtKwh(arb.energyKwh)}</div>
+      <div class="sz-hero-sub">${durHrs}h duration · covers ${covPct} of days · $${arb.spread}/kWh spread</div>
+    </div>
+    ${matches.length ? `
+      <div class="sz-divider"></div>
+      <div class="sz-match-hdr">Nearest catalogue fits</div>
+      <div class="sz-match-list">${matchRows}</div>
+    ` : ''}
+  `;
+}
+
+// ── Render: single recommendation ─────────────────────────
+// Picks one strategy (DCM if viable, else TOU Arb) and renders ONE hero
+// recommendation. The other strategy is shown as a small alternative footer.
+function renderRecommendation(sizing, rates) {
+  const card = document.getElementById('card-rec');
+  const el = document.getElementById('rec-content');
+  const tagEl = document.getElementById('rec-strategy');
+  if (!el || !card) return;
+
+  const dcm = sizing.dcm;
+  const arb = sizing.arb;
+
+  // Pick primary strategy
+  let primary, alt, strategyKey;
+  if (dcm.viable) {
+    primary = { kind: 'dcm', powerKw: dcm.powerKw, energyKwh: dcm.energyKwh, why: `On-peak demand charge $${rates.onPeakDemand}/kW makes peak shaving the dominant value lever.` };
+    alt = arb.viable ? { kind: 'arb', powerKw: arb.powerKw, energyKwh: arb.energyKwh } : null;
+    strategyKey = 'dcm';
+  } else if (arb.viable && arb.powerKw && arb.energyKwh) {
+    primary = { kind: 'arb', powerKw: arb.powerKw, energyKwh: arb.energyKwh, why: `Energy spread $${arb.spread}/kWh makes TOU arbitrage the dominant value lever — demand charges too low for DCM.` };
+    alt = null;
+    strategyKey = 'arb';
+  } else {
+    // Neither viable — show DCM target as illustrative
+    card.classList.remove('sz-accent-dcm', 'sz-accent-arb');
+    card.classList.add('sz-accent-off');
+    tagEl.innerHTML = `<span class="sz-strategy-tag sz-strategy-off">No viable strategy</span>`;
+    el.innerHTML = `<div class="sz-na">
+      Neither demand-charge management nor TOU arbitrage clear their viability thresholds at this site.
+      Demand charge $${rates.onPeakDemand}/kW (need ≥ $${H.DCM_THRESHOLD}/kW) ·
+      Energy spread $${arb.spread}/kWh (need ≥ $${H.ARB_THRESHOLD}/kWh).
+    </div>`;
+    return;
+  }
+
+  // Style accent + strategy tag based on primary
+  card.classList.remove('sz-accent-off');
+  if (strategyKey === 'dcm') {
+    card.classList.add('sz-accent-dcm'); card.classList.remove('sz-accent-arb');
+    tagEl.innerHTML = `<span class="sz-strategy-tag sz-strategy-dcm">Strategy · Demand-Charge Mgmt</span>`;
+  } else {
+    card.classList.add('sz-accent-arb'); card.classList.remove('sz-accent-dcm');
+    tagEl.innerHTML = `<span class="sz-strategy-tag sz-strategy-arb">Strategy · TOU Arbitrage</span>`;
+  }
+
+  // Catalogue match list — informational table (no selection).
+  // Hovering a row highlights matching Step-3 configs/tiles.
+  const matches = catalogueMatchesForSize(primary.powerKw, primary.energyKwh, 4);
+
+  const covPct = document.getElementById('cov-display').textContent;
+  const durHrs = primary.powerKw > 0 ? (primary.energyKwh / primary.powerKw).toFixed(1) : '—';
+
+  const matchRows = matches.map(b => {
+    const key = b.manufacturer + ' ' + b.model;
+    const tierLbl = typeof BATTERY_TIERS !== 'undefined'
+      ? (BATTERY_TIERS.find(t => t.id === b.tier)?.label || b.tier) : b.tier;
+    return `<tr class="sz-fit-row" data-key="${_esc(key)}"
+              onmouseenter="t2_highlightBattery && t2_highlightBattery(this.dataset.key)"
+              onmouseleave="t2_clearHighlight && t2_clearHighlight()">
+      <td class="sz-fit-name"><strong>${_esc(b.manufacturer)}</strong> ${_esc(b.model)}</td>
+      <td class="sz-fit-tier">${_esc(tierLbl)}</td>
+      <td class="sz-fit-num">${_fmtKw(b.power_rating_kw)}</td>
+      <td class="sz-fit-num">${_fmtKwh(b.energy_capacity_kwh)}</td>
+      <td class="sz-fit-num">${b.duration_hrs}h</td>
+      <td class="sz-fit-price">$${b.upfront_cost_per_kwh}/kWh</td>
+    </tr>`;
+  }).join('');
+
+  const altLine = alt
+    ? `<div class="sz-alt-row">
+         <span class="sz-alt-lbl">If sized for TOU arbitrage instead:</span>
+         <span class="sz-alt-val">${_fmtKw(alt.powerKw)} / ${_fmtKwh(alt.energyKwh)}</span>
+         <span class="sz-alt-hint">— Step 3 can sweep around either target.</span>
+       </div>`
+    : '';
+
+  el.innerHTML = `
+    <div class="sz-hero">
+      <div class="sz-hero-num">${_fmtKw(primary.powerKw)}<span class="sz-hero-sep"> / </span>${_fmtKwh(primary.energyKwh)}</div>
+      <div class="sz-hero-sub">${durHrs}h duration · covers ${covPct} of days</div>
+    </div>
+    <div class="sz-why">${primary.why}</div>
+    ${matches.length ? `
+      <div class="sz-divider"></div>
+      <div class="sz-match-hdr">Nearest catalogue fits — hover to see which Step 3 configs use each</div>
+      <table class="sz-fit-table">
+        <thead>
+          <tr>
+            <th>Battery</th>
+            <th>Tier</th>
+            <th>Power</th>
+            <th>Energy</th>
+            <th>Duration</th>
+            <th>Cost</th>
+          </tr>
+        </thead>
+        <tbody>${matchRows}</tbody>
+      </table>
+    ` : ''}
+    ${altLine}
+  `;
+}
+
+function selectRecBattery(key) {
+  if (!S.dailyStats) return;
+  S.recSelectedKey = key;
+  const tariff = TARIFFS[S.tariffKey];
+  const sizing = computeSizing(S.dailyStats, S.rates, S.covPctile, tariff);
+  renderRecommendation(sizing, S.rates);
+  if (typeof refreshAnchorHandoff === 'function') refreshAnchorHandoff();
 }
 
 // ── Render: heatmap ───────────────────────────────────────
@@ -610,8 +813,7 @@ function compute() {
 
   renderLoadStats(sizing, solarOn);
   renderHeatmap(S.loadRows);
-  renderDCM(sizing.dcm, S.rates);
-  renderArb(sizing.arb, S.rates);
+  renderRecommendation(sizing, S.rates);
   renderMonthlyChart(monthly, sizing.dcm.powerKw);
 }
 
@@ -621,8 +823,7 @@ function recomputeSizing() {
   const tariff = TARIFFS[S.tariffKey];
   const sizing = computeSizing(S.dailyStats, S.rates, S.covPctile, tariff);
   renderLoadStats(sizing, S.solarOn && S.pvRows.length > 0);
-  renderDCM(sizing.dcm, S.rates);
-  renderArb(sizing.arb, S.rates);
+  renderRecommendation(sizing, S.rates);
   if (S.monthlyChart) {
     S.monthlyChart.data.datasets[2].data = Array(S.monthlyChart.data.labels.length).fill(sizing.dcm.powerKw);
     S.monthlyChart.data.datasets[2].label = `DCM Peak Target: ${sizing.dcm.powerKw} kW`;
@@ -704,6 +905,9 @@ async function loadScenario(file) {
     S.monthlyChart.destroy();
     S.monthlyChart = null;
   }
+  S.dcmSelectedKey = null;
+  S.arbSelectedKey = null;
+  S.recSelectedKey = null;
   try {
     S.loadRows = parseRows(await fetchCSV('data/' + file));
     ['section-coverage', 'section-load', 'section-sizing', 'section-monthly'].forEach((id) => (document.getElementById(id).style.display = ''));
