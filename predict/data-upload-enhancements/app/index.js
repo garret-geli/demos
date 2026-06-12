@@ -10,9 +10,8 @@ document.addEventListener('DOMContentLoaded', function () {
   const validationResults = document.getElementById('validation-results');
   const optionsSection = document.getElementById('options-section');
   const resolutionSelect = document.getElementById('resolution');
-  const resolutionDisplay = document.getElementById('resolution-display');
-  const dataFormatDisplay = document.getElementById('data-format-display');
-  const unitDisplay = document.getElementById('unit-display');
+  const dataFormatSelect = document.getElementById('data-format');
+  const unitsSelect = document.getElementById('units');
   const dataPreview = document.getElementById('data-preview');
   const tableHeader = document.getElementById('table-header');
   const tableBody = document.getElementById('table-body');
@@ -48,6 +47,8 @@ document.addEventListener('DOMContentLoaded', function () {
     resetValidationResults();
     // Reset heatmap
     window._loadRows = [];
+    window._allLines = [];
+    window._csvHasHeaders = false;
     heatmapVisible = false;
     const hmSection = document.getElementById('heatmap-section');
     if (hmSection) hmSection.classList.add('hidden');
@@ -79,6 +80,16 @@ document.addEventListener('DOMContentLoaded', function () {
       window.S.hmScheme = e.target.value;
       if (window._loadRows && window._loadRows.length && typeof renderHeatmap === 'function') {
         renderHeatmap(window._loadRows);
+      }
+    }
+    if (e.target && e.target.id === 'data-format') {
+      if (e.target.value === 'utilityapi') unitsSelect.value = 'kwh';
+      if (window._allLines && window._allLines.length) {
+        window._loadRows = parseLoadRows(window._allLines, window._csvHasHeaders || false);
+        validateDataCoverage(window._loadRows);
+        if (heatmapVisible && typeof renderHeatmap === 'function') {
+          renderHeatmap(window._loadRows);
+        }
       }
     }
   });
@@ -129,12 +140,6 @@ document.addEventListener('DOMContentLoaded', function () {
     return value;
   }
 
-  function columnCountLabel(count) {
-    if (count === 1) return 'Single Column';
-    if (count === 2) return 'Two Column';
-    return 'Multi Column';
-  }
-
   function readAndValidateCSV(file) {
     const reader = new FileReader();
 
@@ -172,19 +177,31 @@ document.addEventListener('DOMContentLoaded', function () {
       } else {
         // Standard CSV format
         document.getElementById('metadata-section').classList.add('hidden');
-        // Sample the first few lines to analyze
         const sampleLines = allLines.slice(0, Math.min(10, allLines.length));
 
-        // Check column count
-        validateColumnCount(sampleLines);
-
-        // Check for headers
+        const detectedFormat = validateColumnCount(sampleLines);
         csvHasHeaders = validateHeaders(sampleLines);
 
-        // Check if it's time series data and infer timestep
-        validateTimeSeries(sampleLines);
+        if (detectedFormat === 'utilityapi') {
+          setValidationItem(hasHeadersEl, 'Headers detected', false);
+          setValidationItem(isTimeSeriesEl, 'Time series data detected', false);
+          unitsSelect.value = 'kwh';
+          inferUtilityApiTimeStep(allLines);
+        } else if (detectedFormat === 'day-by-row') {
+          setValidationItem(isTimeSeriesEl, 'Pivoted day-by-row format detected', false);
+          inferDayByRowTimeStep(allLines[0]);
+        } else if (detectedFormat === 'three-col') {
+          setValidationItem(isTimeSeriesEl, 'Time series data detected', false);
+          const dataStart = csvHasHeaders ? 1 : 0;
+          const sampleTs = allLines.slice(dataStart, Math.min(dataStart + 5, allLines.length)).map((l) => {
+            const c = parseCSVLine(l);
+            return `${c[0].trim()} ${c[1].trim()}`;
+          });
+          inferTimeStep(sampleTs);
+        } else {
+          validateTimeSeries(sampleLines);
+        }
 
-        // Create standard data preview
         createDataPreview(allLines, csvHasHeaders);
       }
 
@@ -192,8 +209,10 @@ document.addEventListener('DOMContentLoaded', function () {
       optionsSection.classList.remove('hidden');
       dataPreview.classList.remove('hidden');
 
-      // Parse and store load rows for heatmap (standard 2-col CSV only)
+      // Parse and store load rows for heatmap
       if (!isPVWattsFormat) {
+        window._allLines = allLines;
+        window._csvHasHeaders = csvHasHeaders;
         window._loadRows = parseLoadRows(allLines, csvHasHeaders);
         validateDataCoverage(window._loadRows);
       } else {
@@ -347,7 +366,6 @@ document.addEventListener('DOMContentLoaded', function () {
           if (secondHour - firstHour === 1 || (firstHour === 23 && secondHour === 0)) {
             setValidationItem(inferredTimestepEl, 'Inferred resolution: Hourly', false);
             resolutionSelect.value = '1hr';
-            if (resolutionDisplay) resolutionDisplay.textContent = resolutionLabel('1hr');
             return '1hr';
           }
         } catch (e) {
@@ -358,7 +376,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     setValidationItem(inferredTimestepEl, 'Inferred resolution: Hourly', false);
     resolutionSelect.value = '1hr';
-    if (resolutionDisplay) resolutionDisplay.textContent = resolutionLabel('1hr');
     return '1hr';
   }
 
@@ -376,9 +393,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const firstLine = parseCSVLine(lines[0]);
 
     // Detect unit from headers
-    if (hasHeaders && unitDisplay) {
+    if (hasHeaders && unitsSelect) {
       const headerText = lines[0].toLowerCase();
-      unitDisplay.textContent = headerText.includes('kwh') ? 'kWh' : 'kW';
+      unitsSelect.value = headerText.includes('kwh') ? 'kwh' : 'kw';
     }
 
     // Create table headers
@@ -431,13 +448,48 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
+  function detectDataFormat(lines) {
+    if (lines.length === 0) return 'two-col';
+    const headerLower = lines[0].toLowerCase();
+
+    // UtilityAPI: header contains interval_start and interval_kwh
+    if (headerLower.includes('interval_start') && headerLower.includes('interval_kwh')) {
+      return 'utilityapi';
+    }
+
+    const firstLineCols = parseCSVLine(lines[0]).length;
+
+    // Day-by-row: first column header is "Date" and second column header is a time label (e.g. "12:00 AM")
+    if (lines.length > 1) {
+      const headerCols = parseCSVLine(lines[0]);
+      const firstHeader = headerCols[0].trim().toLowerCase();
+      const secondHeader = (headerCols[1] || '').trim();
+      if (firstHeader === 'date' && /^\d{1,2}:\d{2}\s*(AM|PM)$/i.test(secondHeader)) {
+        return 'day-by-row';
+      }
+    }
+
+    // Three-column: col[0] date-like, col[1] time-like in data rows
+    if (firstLineCols >= 3 && lines.length > 1) {
+      const dataRow = parseCSVLine(lines[1]);
+      if (dataRow.length >= 3) {
+        const col0 = dataRow[0].trim();
+        const col1 = dataRow[1].trim();
+        const isDateLike = /^\d{1,4}[-/]\d{1,2}[-/]\d{1,4}/.test(col0) || luxon.DateTime.fromJSDate(new Date(col0)).isValid;
+        const isTimeLike = /^\d{1,2}:\d{2}/.test(col1);
+        if (isDateLike && isTimeLike) return 'three-col';
+      }
+    }
+
+    return 'two-col';
+  }
+
   function validateColumnCount(lines) {
-    // Get columns from first line
-    const firstLineColumns = lines[0].split(',').length;
-    const label = `${firstLineColumns} column data detected`;
-    setValidationItem(hasColumnsEl, label, false);
-    if (dataFormatDisplay) dataFormatDisplay.textContent = columnCountLabel(firstLineColumns);
-    return firstLineColumns <= 3;
+    const format = detectDataFormat(lines);
+    const firstLineColumns = parseCSVLine(lines[0]).length;
+    setValidationItem(hasColumnsEl, `${firstLineColumns} column data detected`, false);
+    if (dataFormatSelect) dataFormatSelect.value = format;
+    return format;
   }
 
   function validateHeaders(lines) {
@@ -538,7 +590,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
       setValidationItem(inferredTimestepEl, `Inferred resolution: ${resolutionLabel(inferredStep)}`, false);
       resolutionSelect.value = inferredStep;
-      if (resolutionDisplay) resolutionDisplay.textContent = resolutionLabel(inferredStep);
 
       return inferredStep;
     } catch (e) {
@@ -546,6 +597,54 @@ document.addEventListener('DOMContentLoaded', function () {
       setValidationItem(inferredTimestepEl, 'Error inferring resolution', true);
       return null;
     }
+  }
+
+  function inferUtilityApiTimeStep(lines) {
+    if (lines.length < 2) return;
+    const headers = parseCSVLine(lines[0]).map((h) => h.toLowerCase().trim());
+    const startIdx = headers.indexOf('interval_start');
+    const endIdx = headers.indexOf('interval_end');
+    if (startIdx === -1) return;
+    const row1 = parseCSVLine(lines[1]);
+    let step = null;
+    if (endIdx !== -1 && row1[startIdx] && row1[endIdx]) {
+      const t1 = luxon.DateTime.fromJSDate(new Date(row1[startIdx].trim()));
+      const t2 = luxon.DateTime.fromJSDate(new Date(row1[endIdx].trim()));
+      if (t1.isValid && t2.isValid) {
+        const diff = Math.abs(t2.diff(t1, 'minutes').minutes);
+        step = diff <= 2 ? '1min' : diff <= 7 ? '5min' : diff <= 30 ? '15min' : '1hr';
+      }
+    } else if (lines.length > 2) {
+      const row2 = parseCSVLine(lines[2]);
+      if (row1[startIdx] && row2[startIdx]) {
+        const t1 = luxon.DateTime.fromJSDate(new Date(row1[startIdx].trim()));
+        const t2 = luxon.DateTime.fromJSDate(new Date(row2[startIdx].trim()));
+        if (t1.isValid && t2.isValid) {
+          const diff = Math.abs(t2.diff(t1, 'minutes').minutes);
+          step = diff <= 2 ? '1min' : diff <= 7 ? '5min' : diff <= 30 ? '15min' : '1hr';
+        }
+      }
+    }
+    if (step) {
+      setValidationItem(inferredTimestepEl, `Inferred resolution: ${resolutionLabel(step)}`, false);
+      resolutionSelect.value = step;
+    }
+  }
+
+  function inferDayByRowTimeStep(headerLine) {
+    const cols = parseCSVLine(headerLine)
+      .map((c) => c.trim())
+      .filter((c) => /^\d{1,2}:\d{2}\s*(AM|PM)$/i.test(c));
+    if (cols.length < 2) {
+      setValidationItem(inferredTimestepEl, 'Could not infer resolution', true);
+      return;
+    }
+    const t1 = luxon.DateTime.fromFormat(cols[0], 'h:mm a');
+    const t2 = luxon.DateTime.fromFormat(cols[1], 'h:mm a');
+    const diff = Math.abs(t2.diff(t1, 'minutes').minutes);
+    const step = diff <= 2 ? '1min' : diff <= 7 ? '5min' : diff <= 30 ? '15min' : '1hr';
+    setValidationItem(inferredTimestepEl, `Inferred resolution: ${resolutionLabel(step)}`, false);
+    resolutionSelect.value = step;
   }
 
   function validateDataCoverage(rows) {
@@ -588,7 +687,17 @@ document.addEventListener('DOMContentLoaded', function () {
     if (metadataContainer) metadataContainer.innerHTML = '';
   }
 
-  function parseLoadRows(lines, hasHeaders) {
+  function convertKwhToKw(rows) {
+    const unit = unitsSelect ? unitsSelect.value.toLowerCase() : 'kw';
+    if (unit !== 'kwh') return;
+    const res = resolutionSelect ? resolutionSelect.value : '15min';
+    const factor = res === '15min' ? 4 : res === '5min' ? 12 : res === '1min' ? 60 : 1;
+    rows.forEach((r) => {
+      r.kw = r.kw * factor;
+    });
+  }
+
+  function parseTwoColRows(lines, hasHeaders) {
     const rows = [];
     const startRow = hasHeaders ? 1 : 0;
     for (let i = startRow; i < lines.length; i++) {
@@ -601,15 +710,86 @@ document.addEventListener('DOMContentLoaded', function () {
       rows.push({ ts, kw });
     }
     rows.sort((a, b) => (a.ts < b.ts ? -1 : a.ts > b.ts ? 1 : 0));
-    // Convert kWh to kW if needed
-    const unit = unitDisplay ? unitDisplay.textContent.trim().toLowerCase() : 'kw';
-    const res = resolutionSelect ? resolutionSelect.value : '15min';
-    if (unit === 'kwh') {
-      const factor = res === '15min' ? 4 : res === '5min' ? 12 : res === '1min' ? 60 : 1;
-      rows.forEach((r) => {
-        r.kw = r.kw * factor;
-      });
-    }
+    convertKwhToKw(rows);
     return rows;
+  }
+
+  function parseThreeColRows(lines, hasHeaders) {
+    const rows = [];
+    const startRow = hasHeaders ? 1 : 0;
+    for (let i = startRow; i < lines.length; i++) {
+      const cells = parseCSVLine(lines[i]);
+      if (cells.length < 3) continue;
+      const ts = luxon.DateTime.fromJSDate(new Date(`${cells[0].trim()} ${cells[1].trim()}`));
+      if (!ts.isValid) continue;
+      const kw = parseFloat(cells[2]);
+      if (isNaN(kw)) continue;
+      rows.push({ ts, kw });
+    }
+    rows.sort((a, b) => (a.ts < b.ts ? -1 : a.ts > b.ts ? 1 : 0));
+    convertKwhToKw(rows);
+    return rows;
+  }
+
+  function parseDayByRowRows(lines) {
+    if (lines.length < 2) return [];
+    // Extract time labels from header row (skip first "Date" column, skip blanks)
+    const headerCols = parseCSVLine(lines[0]).map((c) => c.trim());
+    const timeLabels = headerCols.slice(1).filter((t) => /^\d{1,2}:\d{2}\s*(AM|PM)$/i.test(t));
+    const rows = [];
+    for (let r = 1; r < lines.length; r++) {
+      const cells = parseCSVLine(lines[r]);
+      const dateStr = cells[0] ? cells[0].trim() : '';
+      if (!dateStr) continue;
+      const baseDate = luxon.DateTime.fromJSDate(new Date(dateStr));
+      if (!baseDate.isValid) continue;
+      const baseDateStr = baseDate.toFormat('M/d/yyyy');
+      for (let c = 0; c < timeLabels.length; c++) {
+        const cellVal = cells[c + 1];
+        if (cellVal === undefined || cellVal.trim() === '') continue;
+        const kw = parseFloat(cellVal);
+        if (isNaN(kw)) continue;
+        const ts = luxon.DateTime.fromFormat(`${baseDateStr} ${timeLabels[c]}`, 'M/d/yyyy h:mm a');
+        if (!ts.isValid) continue;
+        rows.push({ ts, kw });
+      }
+    }
+    rows.sort((a, b) => (a.ts < b.ts ? -1 : a.ts > b.ts ? 1 : 0));
+    convertKwhToKw(rows);
+    return rows;
+  }
+
+  function parseUtilityApiRows(lines) {
+    if (lines.length < 2) return [];
+    const headers = parseCSVLine(lines[0]).map((h) => h.toLowerCase().trim());
+    const startIdx = headers.indexOf('interval_start');
+    const kwhIdx = headers.indexOf('interval_kwh');
+    if (startIdx === -1 || kwhIdx === -1) return [];
+    const rows = [];
+    for (let i = 1; i < lines.length; i++) {
+      const cells = parseCSVLine(lines[i]);
+      if (!cells[startIdx] || !cells[kwhIdx]) continue;
+      const ts = luxon.DateTime.fromJSDate(new Date(cells[startIdx].trim()));
+      if (!ts.isValid) continue;
+      const kwh = parseFloat(cells[kwhIdx]);
+      if (isNaN(kwh)) continue;
+      rows.push({ ts, kw: kwh });
+    }
+    rows.sort((a, b) => (a.ts < b.ts ? -1 : a.ts > b.ts ? 1 : 0));
+    // Always convert kWh to kW for UtilityAPI
+    const res = resolutionSelect ? resolutionSelect.value : '15min';
+    const factor = res === '15min' ? 4 : res === '5min' ? 12 : res === '1min' ? 60 : 1;
+    rows.forEach((r) => {
+      r.kw = r.kw * factor;
+    });
+    return rows;
+  }
+
+  function parseLoadRows(lines, hasHeaders) {
+    const format = dataFormatSelect ? dataFormatSelect.value : 'two-col';
+    if (format === 'three-col') return parseThreeColRows(lines, hasHeaders);
+    if (format === 'day-by-row') return parseDayByRowRows(lines);
+    if (format === 'utilityapi') return parseUtilityApiRows(lines);
+    return parseTwoColRows(lines, hasHeaders);
   }
 });
