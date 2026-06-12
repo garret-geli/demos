@@ -53,7 +53,12 @@
                     Data format
                     <button type="button" class="help-btn" title="The detected column format of your CSV data">?</button>
                   </span>
-                  <div class="display-field" id="data-format-display">Two Column</div>
+                  <select id="data-format" class="options-select">
+                    <option value="two-col" selected>Two Column</option>
+                    <option value="three-col">Three Column</option>
+                    <option value="day-by-row">Day by Row</option>
+                    <option value="utilityapi">UtilityAPI</option>
+                  </select>
                 </div>
 
                 <div class="field-group">
@@ -61,11 +66,10 @@
                     Time resolution
                     <button type="button" class="help-btn" title="The detected time interval between data points">?</button>
                   </span>
-                  <div class="display-field" id="resolution-display">15-minute</div>
-                  <select id="resolution" class="hidden">
+                  <select id="resolution" class="options-select">
                     <option value="1min">1 Minute</option>
                     <option value="5min">5 Minutes</option>
-                    <option value="15min">15 Minutes</option>
+                    <option value="15min" selected>15 Minutes</option>
                     <option value="1hr">1 Hour</option>
                   </select>
                 </div>
@@ -75,9 +79,8 @@
                     Unit
                     <button type="button" class="help-btn" title="The unit of measurement for load values">?</button>
                   </span>
-                  <div class="display-field" id="unit-display">kW</div>
-                  <select id="units" class="hidden">
-                    <option value="kw">kW</option>
+                  <select id="units" class="options-select">
+                    <option value="kw" selected>kW</option>
                     <option value="kwh">kWh</option>
                   </select>
                 </div>
