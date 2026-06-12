@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Interval Data</title>
+    <link rel="stylesheet" href="index.css" />
+    <script src="auth.js"></script>
+  </head>
+  <body>
+    <div id="auth-overlay">
+      <div class="auth-card">
+        <h2 class="auth-title">Sign in to continue</h2>
+        <p class="auth-subtitle">Interval Data</p>
+        <div id="auth-error" class="auth-error"></div>
+        <form id="auth-form" autocomplete="on" novalidate>
+          <div class="auth-field"><label for="auth-userid">User ID</label><input type="text" id="auth-userid" autocomplete="username" required /></div>
+          <div class="auth-field"><label for="auth-password">Password</label><input type="password" id="auth-password" autocomplete="current-password" required /></div>
+          <button type="submit" id="auth-submit" class="auth-btn">Sign In</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="card">
+        <div class="card-header">
+          <h1>Interval Data</h1>
+          <button class="signout-btn" onclick="logout()">Sign out</button>
+        </div>
+
+        <section class="data-section">
+          <h2 class="section-heading">Load</h2>
+
+          <div class="data-section-columns">
+            <div class="data-section-left">
+              <div class="field-group">
+                <label class="field-label" for="csvFile">
+                  Upload data
+                  <button type="button" class="help-btn" title="Upload a CSV file with time series load data">?</button>
+                </label>
+                <div class="file-input-box" id="file-input-box">
+                  <input type="file" id="csvFile" accept=".csv" hidden />
+                  <span id="fileName" class="file-name placeholder">Choose a file...</span>
+                  <button type="button" class="file-clear-btn hidden" id="file-clear-btn" title="Clear">&#x2715;</button>
+                </div>
+              </div>
+
+              <div id="options-section" class="options-block hidden">
+                <p class="block-heading">Data Options</p>
+
+                <div class="field-group">
+                  <span class="field-label">
+                    Data format
+                    <button type="button" class="help-btn" title="The detected column format of your CSV data">?</button>
+                  </span>
+                  <div class="display-field" id="data-format-display">Two Column</div>
+                </div>
+
+                <div class="field-group">
+                  <span class="field-label">
+                    Time resolution
+                    <button type="button" class="help-btn" title="The detected time interval between data points">?</button>
+                  </span>
+                  <div class="display-field" id="resolution-display">15-minute</div>
+                  <select id="resolution" class="hidden">
+                    <option value="1min">1 Minute</option>
+                    <option value="5min">5 Minutes</option>
+                    <option value="15min">15 Minutes</option>
+                    <option value="1hr">1 Hour</option>
+                  </select>
+                </div>
+
+                <div class="field-group">
+                  <span class="field-label">
+                    Unit
+                    <button type="button" class="help-btn" title="The unit of measurement for load values">?</button>
+                  </span>
+                  <div class="display-field" id="unit-display">kW</div>
+                  <select id="units" class="hidden">
+                    <option value="kw">kW</option>
+                    <option value="kwh">kWh</option>
+                  </select>
+                </div>
+
+                <div class="field-group toggle-row">
+                  <span class="toggle-label">Has daylight savings shift</span>
+                  <label class="toggle-switch" aria-label="Has daylight savings shift">
+                    <input type="checkbox" id="dst-toggle" checked />
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+              </div>
+            </div>
+            <!-- /.data-section-left -->
+
+            <div class="data-section-right">
+              <div id="validation-results" class="validation-block hidden">
+                <p class="block-heading">Validation Results</p>
+                <ul class="validation-list">
+                  <li id="is-csv">Valid CSV file</li>
+                  <li id="has-columns">Checking column count...</li>
+                  <li id="has-headers">Checking for headers...</li>
+                  <li id="is-time-series">Checking if time series data...</li>
+                  <li id="inferred-timestep">Inferring resolution...</li>
+                  <li id="is-full-year">Checking data coverage...</li>
+                </ul>
+              </div>
+            </div>
+            <!-- /.data-section-right -->
+          </div>
+          <!-- /.data-section-columns -->
+
+          <div id="data-preview" class="preview-block hidden">
+            <div class="preview-header">
+              <p class="block-heading">Data Preview</p>
+              <button type="button" class="heatmap-btn" id="view-heatmap-btn">View Heatmap</button>
+            </div>
+
+            <div id="metadata-section" class="hidden">
+              <h3>File Metadata</h3>
+              <div class="metadata-container" id="metadata-container"></div>
+            </div>
+
+            <div class="table-container">
+              <table id="preview-table">
+                <thead>
+                  <tr id="table-header"></tr>
+                </thead>
+                <tbody id="table-body"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Heatmap section — revealed by "View Heatmap" button -->
+          <div id="heatmap-section" class="heatmap-section hidden">
+            <div class="heatmap-section-head">
+              <span class="heatmap-section-title" id="heatmap-title">Baseline Load Heatmap: Date × Hour of Day</span>
+              <div style="display: flex; align-items: center; gap: 6px; margin-left: auto">
+                <label for="hm-scheme" style="font-size: 11px; color: #9ca3af">Colors:</label>
+                <select id="hm-scheme" style="font-size: 11px; padding: 2px 4px; border: 1px solid #e5e7eb; border-radius: 4px; background: #fff; color: #374151">
+                  <option value="turbo" selected>Turbo</option>
+                  <option value="plasma">Plasma</option>
+                  <option value="viridis">Viridis</option>
+                  <option value="hot">Hot</option>
+                  <option value="reds">Reds</option>
+                  <option value="blues">Blues</option>
+                  <option value="greens">Greens</option>
+                </select>
+              </div>
+            </div>
+            <div class="heatmap-outer">
+              <div class="heatmap-yaxis" id="hm-yaxis"></div>
+              <div class="heatmap-main">
+                <canvas id="heatmap-canvas"></canvas>
+                <div class="heatmap-xaxis" id="hm-xaxis"></div>
+              </div>
+              <div class="hm-legend-right">
+                <span id="hm-max-lbl">—</span>
+                <div class="hm-gradient-v" id="hm-gradient-v"></div>
+                <span id="hm-min-lbl">0 kW</span>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <div id="hm-tooltip"></div>
+
+    <script src="luxon.min.js"></script>
+    <script src="heatmap.js"></script>
+    <script src="index.js"></script>
+  </body>
+</html>

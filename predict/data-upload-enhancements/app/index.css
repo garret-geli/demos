@@ -1,0 +1,640 @@
+/* ── Reset & base ────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #f3f4f6;
+  color: #111827;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 40px 20px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+}
+
+/* ── Layout ─────────────────────────────────────────────── */
+.container {
+  width: 100%;
+  max-width: 1384px;
+}
+
+.card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  padding: 28px 28px 32px;
+  width: 100%;
+}
+
+/* ── Card header ─────────────────────────────────────────── */
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+h1 {
+  font-size: 22px;
+  font-weight: 700;
+  color: #111827;
+}
+
+/* ── Section heading ─────────────────────────────────────── */
+.section-heading {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 16px;
+}
+
+/* ── Block headings (bold labels above grouped content) ───── */
+.block-heading {
+  font-size: 13px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 10px;
+}
+
+/* ── Field groups ────────────────────────────────────────── */
+.field-group {
+  margin-bottom: 14px;
+}
+
+.field-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 400;
+  margin-bottom: 6px;
+}
+
+/* ── Help button ─────────────────────────────────────────── */
+.help-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid #d1d5db;
+  background: transparent;
+  color: #9ca3af;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  flex-shrink: 0;
+  transition:
+    border-color 0.15s,
+    color 0.15s;
+}
+
+.help-btn:hover {
+  border-color: #9ca3af;
+  color: #6b7280;
+}
+
+/* ── File input box ──────────────────────────────────────── */
+.file-input-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  background: #fff;
+  transition: border-color 0.15s;
+  min-width: 0;
+}
+
+.file-input-box:hover {
+  border-color: #9ca3af;
+}
+
+.file-name {
+  flex: 1;
+  font-size: 13px;
+  color: #111827;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.file-name.placeholder {
+  color: #9ca3af;
+}
+
+.file-clear-btn {
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s;
+}
+
+.file-clear-btn:hover {
+  color: #4b5563;
+}
+
+/* ── Validation results ──────────────────────────────────── */
+.data-section-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: start;
+  margin-bottom: 20px;
+}
+
+.data-section-left,
+.data-section-right {
+  min-width: 0;
+}
+
+.data-section-right .validation-block {
+  margin-bottom: 0;
+}
+
+.validation-block {
+  margin-bottom: 20px;
+}
+
+.validation-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.validation-list li {
+  font-size: 13px;
+  color: #374151;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.validation-list li::before {
+  content: '✓';
+  color: #22c55e;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.validation-list li.error {
+  color: #dc2626;
+}
+
+.validation-list li.error::before {
+  content: '✗';
+  color: #dc2626;
+}
+
+.validation-list li.warning {
+  color: #d97706;
+}
+
+.validation-list li.warning::before {
+  content: '!';
+  color: #d97706;
+  font-weight: 700;
+}
+
+/* ── Options block ───────────────────────────────────────── */
+.options-block {
+  margin-bottom: 20px;
+}
+
+/* ── Display fields (read-only detected values) ──────────── */
+.display-field {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: #111827;
+  background: #fff;
+  width: 100%;
+}
+
+/* ── Toggle row ──────────────────────────────────────────── */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0;
+}
+
+.toggle-label {
+  font-size: 13px;
+  color: #374151;
+}
+
+/* ── Toggle switch ───────────────────────────────────────── */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.toggle-slider {
+  position: absolute;
+  inset: 0;
+  border-radius: 24px;
+  background: #d1d5db;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  left: 3px;
+  top: 3px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.2s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.toggle-switch input:checked + .toggle-slider {
+  background: #3b82f6;
+}
+
+.toggle-switch input:checked + .toggle-slider::before {
+  transform: translateX(20px);
+}
+
+/* ── Data preview block ──────────────────────────────────── */
+.preview-block {
+  margin-top: 4px;
+}
+
+.preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.preview-header .block-heading {
+  margin-bottom: 0;
+}
+
+.heatmap-btn {
+  padding: 6px 14px;
+  border: 1.5px solid #3b82f6;
+  border-radius: 8px;
+  background: transparent;
+  color: #3b82f6;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.heatmap-btn:hover {
+  background: #eff6ff;
+}
+
+/* ── Metadata (PVWatts) ──────────────────────────────────── */
+#metadata-section {
+  margin-bottom: 16px;
+}
+
+h3 {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 10px;
+}
+
+.metadata-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.metadata-item {
+  display: flex;
+  padding: 6px 8px;
+  background: #f9fafb;
+  border-radius: 4px;
+  gap: 8px;
+}
+
+.metadata-label {
+  font-weight: 600;
+  min-width: 120px;
+  color: #374151;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.metadata-value {
+  color: #6b7280;
+  font-size: 12px;
+  flex-grow: 1;
+  word-break: break-word;
+}
+
+/* ── Table ───────────────────────────────────────────────── */
+.table-container {
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+thead {
+  background-color: #f9fafb;
+}
+
+th {
+  padding: 10px 14px;
+  text-align: left;
+  font-weight: 600;
+  color: #3b82f6;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 12px;
+}
+
+td {
+  padding: 8px 14px;
+  border-bottom: 1px solid #f3f4f6;
+  color: #374151;
+}
+
+tr:last-child td {
+  border-bottom: none;
+}
+
+tr:hover td {
+  background-color: #f9fafb;
+}
+
+/* ── Utility ─────────────────────────────────────────────── */
+.hidden {
+  display: none !important;
+}
+
+/* ── Sign-out button ─────────────────────────────────────── */
+.signout-btn {
+  padding: 4px 10px;
+  background: transparent;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 11px;
+  font-family: inherit;
+  color: #4b5563;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    color 0.15s;
+}
+
+.signout-btn:hover {
+  border-color: #9ca3af;
+  color: #111827;
+}
+
+/* ── Auth overlay ────────────────────────────────────────── */
+#auth-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.auth-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 32px 28px;
+  width: 100%;
+  max-width: 360px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+.auth-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 4px;
+  text-align: left;
+}
+
+.auth-subtitle {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.auth-error {
+  display: none;
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  color: #b91c1c;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 12px;
+  margin-bottom: 14px;
+}
+
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.auth-field label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.auth-field input {
+  padding: 7px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #111827;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.auth-field input:focus {
+  border-color: #001c77;
+}
+
+.auth-btn {
+  margin-top: 6px;
+  width: 100%;
+  padding: 8px;
+  background: #001c77;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.auth-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.auth-btn:not(:disabled):hover {
+  opacity: 0.88;
+}
+
+/* ── Constrain form controls to comfortable reading width ─── */
+.field-group,
+.validation-block,
+.options-block {
+  max-width: 600px;
+}
+
+/* ── Heatmap section ─────────────────────────────────────── */
+.heatmap-section {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.heatmap-section-head {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.heatmap-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #9ca3af;
+}
+
+/* ── Heatmap layout ──────────────────────────────────────── */
+.heatmap-outer {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.heatmap-yaxis {
+  position: relative;
+  width: 38px;
+  flex-shrink: 0;
+}
+
+.heatmap-main {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  overflow-x: auto;
+}
+
+#heatmap-canvas {
+  display: block;
+  width: 100%;
+  border-radius: 2px;
+  image-rendering: pixelated;
+  cursor: crosshair;
+}
+
+.heatmap-xaxis {
+  position: relative;
+  height: 14px;
+  margin-top: 2px;
+}
+
+.hm-legend-right {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  width: 48px;
+  padding-top: 2px;
+}
+
+.hm-legend-right span {
+  font-size: 10px;
+  color: #9ca3af;
+  white-space: nowrap;
+}
+
+.hm-gradient-v {
+  flex: 1;
+  width: 12px;
+  min-height: 60px;
+  border-radius: 4px;
+  background: linear-gradient(to top, #0d0887, #4b02a1, #7e03a8, #a82296, #cb4778, #e56b5d, #f89441, #fdc328, #f0f921);
+}
+
+/* ── Heatmap tooltip ─────────────────────────────────────── */
+#hm-tooltip {
+  display: none;
+  position: fixed;
+  background: #111827;
+  color: #fff;
+  font-size: 11px;
+  line-height: 1.5;
+  padding: 6px 10px;
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 200;
+  white-space: nowrap;
+}
