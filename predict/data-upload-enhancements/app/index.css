@@ -550,6 +550,106 @@ tr:hover td {
   max-width: 600px;
 }
 
+/* ── Sample files ────────────────────────────────────────── */
+.sample-files-block {
+  margin-top: 8px;
+  margin-bottom: 16px;
+}
+
+.sample-files-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.sample-files-toggle-label {
+  font-size: 12px;
+  color: #9ca3af;
+  transition: color 0.15s;
+}
+
+.sample-files-toggle:hover .sample-files-toggle-label {
+  color: #3b82f6;
+}
+
+.sample-files-chevron {
+  flex-shrink: 0;
+  color: #9ca3af;
+  transition:
+    transform 0.2s,
+    color 0.15s;
+}
+
+.sample-files-toggle:hover .sample-files-chevron {
+  color: #3b82f6;
+}
+
+.sample-files-toggle[aria-expanded='true'] .sample-files-chevron {
+  transform: rotate(180deg);
+}
+
+.sample-files-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 8px;
+}
+
+.sample-file-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  text-decoration: none;
+  background: #fff;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+}
+
+.sample-file-link:hover {
+  border-color: #3b82f6;
+  background: #eff6ff;
+}
+
+.sample-file-format {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  min-width: 94px;
+  flex-shrink: 0;
+}
+
+.sample-file-name {
+  font-size: 12px;
+  color: #374151;
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sample-file-dl {
+  font-size: 13px;
+  color: #d1d5db;
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+
+.sample-file-link:hover .sample-file-dl {
+  color: #3b82f6;
+}
+
 /* ── Heatmap section ─────────────────────────────────────── */
 .heatmap-section {
   margin-top: 24px;
