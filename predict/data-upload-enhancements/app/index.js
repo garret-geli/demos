@@ -27,6 +27,17 @@ document.addEventListener('DOMContentLoaded', function () {
   const inferredTimestepEl = document.getElementById('inferred-timestep');
   const isFullYearEl = document.getElementById('is-full-year');
 
+  // Sample files accordion
+  const sampleToggle = document.getElementById('sample-files-toggle');
+  const sampleList = document.getElementById('sample-files-list');
+  if (sampleToggle && sampleList) {
+    sampleToggle.addEventListener('click', function () {
+      const expanded = sampleToggle.getAttribute('aria-expanded') === 'true';
+      sampleToggle.setAttribute('aria-expanded', String(!expanded));
+      sampleList.classList.toggle('hidden', expanded);
+    });
+  }
+
   // File input box click opens the file picker (but not when clicking the clear button)
   fileInputBox.addEventListener('click', function (e) {
     if (e.target !== fileClearBtn) {
@@ -84,9 +95,21 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     if (e.target && e.target.id === 'data-format') {
       if (e.target.value === 'utilityapi') unitsSelect.value = 'kwh';
+      if (e.target.value === 'helioscope') {
+        resolutionSelect.value = '1hr';
+        unitsSelect.value = 'w';
+      }
       if (window._allLines && window._allLines.length) {
         window._loadRows = parseLoadRows(window._allLines, window._csvHasHeaders || false);
         validateDataCoverage(window._loadRows);
+        if (heatmapVisible && typeof renderHeatmap === 'function') {
+          renderHeatmap(window._loadRows);
+        }
+      }
+    }
+    if (e.target && e.target.id === 'units') {
+      if (window._allLines && window._allLines.length) {
+        window._loadRows = parseLoadRows(window._allLines, window._csvHasHeaders || false);
         if (heatmapVisible && typeof renderHeatmap === 'function') {
           renderHeatmap(window._loadRows);
         }
@@ -174,6 +197,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Check for time series data and infer time step
         validatePVWattsTimeSeries(dataLines);
+        unitsSelect.value = 'w';
       } else {
         // Standard CSV format
         document.getElementById('metadata-section').classList.add('hidden');
@@ -187,6 +211,12 @@ document.addEventListener('DOMContentLoaded', function () {
           setValidationItem(isTimeSeriesEl, 'Time series data detected', false);
           unitsSelect.value = 'kwh';
           inferUtilityApiTimeStep(allLines);
+        } else if (detectedFormat === 'helioscope') {
+          setValidationItem(hasHeadersEl, 'Headers detected', false);
+          setValidationItem(isTimeSeriesEl, 'Time series data detected', false);
+          setValidationItem(inferredTimestepEl, 'Inferred resolution: Hourly', false);
+          resolutionSelect.value = '1hr';
+          unitsSelect.value = 'w';
         } else if (detectedFormat === 'day-by-row') {
           setValidationItem(isTimeSeriesEl, 'Pivoted day-by-row format detected', false);
           inferDayByRowTimeStep(allLines[0]);
@@ -215,11 +245,20 @@ document.addEventListener('DOMContentLoaded', function () {
         window._csvHasHeaders = csvHasHeaders;
         window._loadRows = parseLoadRows(allLines, csvHasHeaders);
         validateDataCoverage(window._loadRows);
+        if (heatmapVisible && typeof renderHeatmap === 'function') {
+          setTimeout(() => renderHeatmap(window._loadRows), 50);
+        }
       } else {
         window._loadRows = [];
         if (isFullYearEl) {
           isFullYearEl.textContent = 'N/A (PVWatts format)';
           isFullYearEl.className = '';
+        }
+        if (heatmapVisible) {
+          const hmSection = document.getElementById('heatmap-section');
+          if (hmSection) hmSection.classList.add('hidden');
+          heatmapVisible = false;
+          if (viewHeatmapBtn) viewHeatmapBtn.textContent = 'View Heatmap';
         }
       }
     };
@@ -392,10 +431,15 @@ document.addEventListener('DOMContentLoaded', function () {
     // Process the first line to get headers or first row of data
     const firstLine = parseCSVLine(lines[0]);
 
-    // Detect unit from headers
-    if (hasHeaders && unitsSelect) {
+    // Detect unit from headers — skip for formats with a known unit
+    const knownUnitFormats = ['utilityapi', 'helioscope'];
+    if (hasHeaders && unitsSelect && !knownUnitFormats.includes(dataFormatSelect ? dataFormatSelect.value : '')) {
       const headerText = lines[0].toLowerCase();
-      unitsSelect.value = headerText.includes('kwh') ? 'kwh' : 'kw';
+      if (headerText.includes('kwh')) unitsSelect.value = 'kwh';
+      else if (/[,\s(]wh[,\s)]/.test(headerText)) unitsSelect.value = 'wh';
+      else if (/[,\s(]kw[,\s)]/.test(headerText)) unitsSelect.value = 'kw';
+      else if (/[,\s(]w[,\s)]/.test(headerText)) unitsSelect.value = 'w';
+      else unitsSelect.value = headerText.includes('kwh') ? 'kwh' : 'kw';
     }
 
     // Create table headers
@@ -457,6 +501,11 @@ document.addEventListener('DOMContentLoaded', function () {
       return 'utilityapi';
     }
 
+    // Helioscope: header contains timestamp and grid_power
+    if (headerLower.includes('timestamp') && headerLower.includes('grid_power')) {
+      return 'helioscope';
+    }
+
     const firstLineCols = parseCSVLine(lines[0]).length;
 
     // Day-by-row: first column header is "Date" and second column header is a time label (e.g. "12:00 AM")
@@ -487,7 +536,11 @@ document.addEventListener('DOMContentLoaded', function () {
   function validateColumnCount(lines) {
     const format = detectDataFormat(lines);
     const firstLineColumns = parseCSVLine(lines[0]).length;
-    setValidationItem(hasColumnsEl, `${firstLineColumns} column data detected`, false);
+    if (format === 'helioscope') {
+      setValidationItem(hasColumnsEl, 'Helioscope format detected', false);
+    } else {
+      setValidationItem(hasColumnsEl, `${firstLineColumns} column data detected`, false);
+    }
     if (dataFormatSelect) dataFormatSelect.value = format;
     return format;
   }
@@ -687,13 +740,16 @@ document.addEventListener('DOMContentLoaded', function () {
     if (metadataContainer) metadataContainer.innerHTML = '';
   }
 
-  function convertKwhToKw(rows) {
+  function normalizeToKw(rows) {
     const unit = unitsSelect ? unitsSelect.value.toLowerCase() : 'kw';
-    if (unit !== 'kwh') return;
+    if (unit === 'kw') return;
     const res = resolutionSelect ? resolutionSelect.value : '15min';
-    const factor = res === '15min' ? 4 : res === '5min' ? 12 : res === '1min' ? 60 : 1;
+    const minsPerInterval = res === '1min' ? 1 : res === '5min' ? 5 : res === '15min' ? 15 : 60;
+    const intervalsPerHour = 60 / minsPerInterval;
     rows.forEach((r) => {
-      r.kw = r.kw * factor;
+      if (unit === 'w') r.kw = r.kw / 1000;
+      else if (unit === 'kwh') r.kw = r.kw * intervalsPerHour;
+      else if (unit === 'wh') r.kw = (r.kw * intervalsPerHour) / 1000;
     });
   }
 
@@ -710,7 +766,7 @@ document.addEventListener('DOMContentLoaded', function () {
       rows.push({ ts, kw });
     }
     rows.sort((a, b) => (a.ts < b.ts ? -1 : a.ts > b.ts ? 1 : 0));
-    convertKwhToKw(rows);
+    normalizeToKw(rows);
     return rows;
   }
 
@@ -727,7 +783,7 @@ document.addEventListener('DOMContentLoaded', function () {
       rows.push({ ts, kw });
     }
     rows.sort((a, b) => (a.ts < b.ts ? -1 : a.ts > b.ts ? 1 : 0));
-    convertKwhToKw(rows);
+    normalizeToKw(rows);
     return rows;
   }
 
@@ -755,7 +811,7 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     }
     rows.sort((a, b) => (a.ts < b.ts ? -1 : a.ts > b.ts ? 1 : 0));
-    convertKwhToKw(rows);
+    normalizeToKw(rows);
     return rows;
   }
 
@@ -776,12 +832,45 @@ document.addEventListener('DOMContentLoaded', function () {
       rows.push({ ts, kw: kwh });
     }
     rows.sort((a, b) => (a.ts < b.ts ? -1 : a.ts > b.ts ? 1 : 0));
-    // Always convert kWh to kW for UtilityAPI
-    const res = resolutionSelect ? resolutionSelect.value : '15min';
-    const factor = res === '15min' ? 4 : res === '5min' ? 12 : res === '1min' ? 60 : 1;
-    rows.forEach((r) => {
-      r.kw = r.kw * factor;
-    });
+    normalizeToKw(rows);
+    return rows;
+  }
+
+  function parseHelioscopeRows(lines) {
+    if (lines.length < 2) return [];
+    const headers = parseCSVLine(lines[0]).map((h) => h.toLowerCase().trim());
+    const tsIdx = headers.indexOf('timestamp');
+    const pwIdx = headers.indexOf('grid_power');
+    const hiIdx = headers.indexOf('hour_index');
+    if (tsIdx === -1 || pwIdx === -1) return [];
+
+    // Helioscope TMY exports use timestamps from multiple historical years
+    // (each month drawn from the best-match year). Use hour_index (1-8760) to
+    // map every row onto a single canonical year so the heatmap renders cleanly.
+    const useHourIndex = hiIdx !== -1;
+    const canonicalBase = luxon.DateTime.fromObject({ year: 2004, month: 1, day: 1, hour: 0 });
+
+    const rows = [];
+    for (let i = 1; i < lines.length; i++) {
+      const cells = parseCSVLine(lines[i]);
+      if (!cells[tsIdx]) continue;
+
+      let ts;
+      if (useHourIndex && cells[hiIdx]) {
+        const hi = parseInt(cells[hiIdx], 10);
+        if (isNaN(hi) || hi < 1) continue;
+        ts = canonicalBase.plus({ hours: hi - 1 });
+      } else {
+        ts = luxon.DateTime.fromFormat(cells[tsIdx].trim(), 'M/d/yyyy H:mm');
+      }
+      if (!ts || !ts.isValid) continue;
+
+      const watts = cells[pwIdx] !== undefined && cells[pwIdx].trim() !== '' ? parseFloat(cells[pwIdx]) : 0;
+      rows.push({ ts, kw: isNaN(watts) ? 0 : watts });
+    }
+
+    rows.sort((a, b) => (a.ts < b.ts ? -1 : a.ts > b.ts ? 1 : 0));
+    normalizeToKw(rows);
     return rows;
   }
 
@@ -790,6 +879,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (format === 'three-col') return parseThreeColRows(lines, hasHeaders);
     if (format === 'day-by-row') return parseDayByRowRows(lines);
     if (format === 'utilityapi') return parseUtilityApiRows(lines);
+    if (format === 'helioscope') return parseHelioscopeRows(lines);
     return parseTwoColRows(lines, hasHeaders);
   }
 });

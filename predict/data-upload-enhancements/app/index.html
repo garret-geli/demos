@@ -45,6 +45,66 @@
                 </div>
               </div>
 
+              <div class="sample-files-block">
+                <button type="button" class="sample-files-toggle" id="sample-files-toggle" aria-expanded="false" aria-controls="sample-files-list">
+                  <span class="sample-files-toggle-label">Sample files</span>
+                  <svg class="sample-files-chevron" width="10" height="10" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </button>
+                <ul class="sample-files-list hidden" id="sample-files-list">
+                  <li>
+                    <a href="../data/load_2col.csv" download class="sample-file-link">
+                      <span class="sample-file-format">Two Column</span>
+                      <span class="sample-file-name">load_2col.csv</span>
+                      <span class="sample-file-dl">&#8595;</span>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="../data/load_3col.csv" download class="sample-file-link">
+                      <span class="sample-file-format">Three Column</span>
+                      <span class="sample-file-name">load_3col.csv</span>
+                      <span class="sample-file-dl">&#8595;</span>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="../data/load_day_by_row.csv" download class="sample-file-link">
+                      <span class="sample-file-format">Day by Row</span>
+                      <span class="sample-file-name">load_day_by_row.csv</span>
+                      <span class="sample-file-dl">&#8595;</span>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="../data/load_utilityapi.csv" download class="sample-file-link">
+                      <span class="sample-file-format">UtilityAPI</span>
+                      <span class="sample-file-name">load_utilityapi.csv</span>
+                      <span class="sample-file-dl">&#8595;</span>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="../data/load_incomplete_year.csv" download class="sample-file-link">
+                      <span class="sample-file-format">Two Column</span>
+                      <span class="sample-file-name">load_incomplete_year.csv</span>
+                      <span class="sample-file-dl">&#8595;</span>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="../data/pv_helioscope.csv" download class="sample-file-link">
+                      <span class="sample-file-format">Helioscope</span>
+                      <span class="sample-file-name">pv_helioscope.csv</span>
+                      <span class="sample-file-dl">&#8595;</span>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="../data/pv_pvwatts.csv" download class="sample-file-link">
+                      <span class="sample-file-format">PVWatts</span>
+                      <span class="sample-file-name">pv_pvwatts.csv</span>
+                      <span class="sample-file-dl">&#8595;</span>
+                    </a>
+                  </li>
+                </ul>
+              </div>
+
               <div id="options-section" class="options-block hidden">
                 <p class="block-heading">Data Options</p>
 
@@ -58,6 +118,7 @@
                     <option value="three-col">Three Column</option>
                     <option value="day-by-row">Day by Row</option>
                     <option value="utilityapi">UtilityAPI</option>
+                    <option value="helioscope">Helioscope</option>
                   </select>
                 </div>
 
@@ -80,7 +141,9 @@
                     <button type="button" class="help-btn" title="The unit of measurement for load values">?</button>
                   </span>
                   <select id="units" class="options-select">
+                    <option value="w">W</option>
                     <option value="kw" selected>kW</option>
+                    <option value="wh">Wh</option>
                     <option value="kwh">kWh</option>
                   </select>
                 </div>
